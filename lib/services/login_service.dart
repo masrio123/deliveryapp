@@ -33,9 +33,10 @@ class AuthService {
       await prefs.setString('user_name', data['user']['name']);
       await prefs.setString('user_email', data['user']['email']);
       await prefs.setString(
-        'tenant_id',
-        data['user']['tenant_id'].toString() ?? '',
+        'porter_id',
+        data['user']['porter_id'].toString() ?? '',
       );
+
       await prefs.setString('role', data['user']['role']);
 
       return {'success': true, 'user': data['user']};
