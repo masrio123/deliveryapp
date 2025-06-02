@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:petraporter_deliveryapp/pages/account_page.dart';
+import 'activity_page.dart'; // pastikan file ini ada
 
 void main() {
   runApp(MyApp());
@@ -31,85 +33,110 @@ class _MainPageState extends State<MainPage> {
   bool isOnline = true;
   OrderStatus orderStatus = OrderStatus.none;
 
+  // Start app on Activity page
+  int currentIndex = 1;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
+        currentIndex: currentIndex,
+        onTap: (index) {
+          setState(() {
+            currentIndex = index;
+          });
+        },
         selectedItemColor: Color(0xFFFF7622),
         unselectedItemColor: Colors.grey[600],
         selectedLabelStyle: TextStyle(fontFamily: 'Sen'),
         unselectedLabelStyle: TextStyle(fontFamily: 'Sen'),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.local_shipping), label: 'Order'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.local_shipping),
+            label: 'Order',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.article), label: 'Activity'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: IndexedStack(
+          index: currentIndex,
+          children: [
+            _buildOrderPage(),
+            ActivityPage(), // pastikan ada file activity_page.dart
+            AccountPage(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Online status
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    isOnline ? '   You are Online' : '   You are Offline',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isOnline ? Colors.green : Colors.red,
-                      fontSize: 18,
-                      fontFamily: 'Sen',
-                    ),
-                  ),
-                  Switch(
-                    value: isOnline,
-                    activeColor: Colors.green,
-                    onChanged: (val) {
-                      setState(() {
-                        isOnline = val;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _summaryBox('0', 'ORDERS'),
-                    Container(width: 1, height: 40, color: Colors.grey.shade400),
-                    _summaryBox('Rp0', 'TOTAL INCOME'),
-                  ],
-                ),
-              ),
-              SizedBox(height: 30),
               Text(
-                'Order Requests',
+                'Hello, Jovan',
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                  fontSize: 18,
                   fontFamily: 'Sen',
                 ),
               ),
-              SizedBox(height: 16),
-              if (orderStatus != OrderStatus.finished)
-                _orderCard(
-                  imageUrl: 'https://i.pravatar.cc/100',
-                  name: 'Reyhan',
-                  price: 'Rp126.000',
-                ),
+              Switch(
+                value: isOnline,
+                activeColor: Colors.green,
+                onChanged: (val) {
+                  setState(() {
+                    isOnline = val;
+                  });
+                },
+              ),
             ],
           ),
-        ),
+          SizedBox(height: 20),
+          // Summary box
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _summaryBox('0', 'ORDERS'),
+                Container(width: 1, height: 40, color: Colors.grey.shade400),
+                _summaryBox('Rp0', 'TOTAL INCOME'),
+              ],
+            ),
+          ),
+          SizedBox(height: 30),
+          // Order requests
+          Text(
+            'Order Requests',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              fontFamily: 'Sen',
+            ),
+          ),
+          SizedBox(height: 16),
+          if (orderStatus != OrderStatus.finished)
+            _orderCard(
+              imageUrl: 'https://i.pravatar.cc/100',
+              name: 'Reyhan',
+              price: 'Rp126.000',
+            ),
+        ],
       ),
     );
   }
@@ -159,9 +186,23 @@ class _MainPageState extends State<MainPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Sen')),
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    fontFamily: 'Sen',
+                  ),
+                ),
                 SizedBox(height: 4),
-                Text(price, style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Sen')),
+                Text(
+                  price,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    fontFamily: 'Sen',
+                  ),
+                ),
               ],
             ),
           ),
@@ -178,7 +219,12 @@ class _MainPageState extends State<MainPage> {
               });
             }),
           ] else if (orderStatus == OrderStatus.accepted) ...[
-            _roundedButton('Details', Colors.orange, Colors.white, _showOrderDetailsDialog),
+            _roundedButton(
+              'Details',
+              Colors.orange,
+              Colors.white,
+              _showOrderDetailsDialog,
+            ),
           ] else if (orderStatus == OrderStatus.delivering) ...[
             _roundedButton('Finish Order', Colors.green, Colors.white, () {
               setState(() {
@@ -191,7 +237,12 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget _roundedButton(String text, Color bgColor, Color textColor, VoidCallback onPressed) {
+  Widget _roundedButton(
+    String text,
+    Color bgColor,
+    Color textColor,
+    VoidCallback onPressed,
+  ) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
@@ -200,7 +251,11 @@ class _MainPageState extends State<MainPage> {
         elevation: 0,
         padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Sen'),
+        textStyle: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'Sen',
+        ),
       ),
       child: Text(text),
     );
@@ -209,54 +264,75 @@ class _MainPageState extends State<MainPage> {
   void _showOrderDetailsDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Order Details', style: TextStyle(fontFamily: 'Sen', fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _restaurantCard(
-                name: 'Ndokee Express',
-                items: [
-                  {'name': 'Nasi Goreng Ayam', 'qty': 1, 'price': 30000},
-                  {'name': 'Nasi Goreng Hongkong', 'qty': 1, 'price': 30000},
+      builder:
+          (_) => AlertDialog(
+            title: Text(
+              'Order Details',
+              style: TextStyle(fontFamily: 'Sen', fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _restaurantCard(
+                    name: 'Ndokee Express',
+                    items: [
+                      {'name': 'Nasi Goreng Ayam', 'qty': 1, 'price': 30000},
+                      {
+                        'name': 'Nasi Goreng Hongkong',
+                        'qty': 1,
+                        'price': 30000,
+                      },
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  _restaurantCard(
+                    name: 'Depot Kita',
+                    items: [
+                      {'name': 'Mie Goreng', 'qty': 1, 'price': 30000},
+                      {'name': 'Nasi Empal', 'qty': 1, 'price': 30000},
+                    ],
+                    note: 'extra garam sama msg',
+                  ),
+                  SizedBox(height: 16),
+                  Divider(thickness: 1),
+                  Text(
+                    'Total Payment',
+                    style: TextStyle(
+                      fontFamily: 'Sen',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  _priceRow('Total Price', 'Rp120.000'),
+                  _priceRow('Delivery Fee', 'Rp6.000'),
+                  _priceRow('TOTAL', 'Rp126.000', isBold: true),
                 ],
               ),
-              SizedBox(height: 12),
-              _restaurantCard(
-                name: 'Depot Kita',
-                items: [
-                  {'name': 'Mie Goreng', 'qty': 1, 'price': 30000},
-                  {'name': 'Nasi Empal', 'qty': 1, 'price': 30000},
-                ],
-                note: 'extra garam sama msg',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    orderStatus = OrderStatus.delivering;
+                  });
+                },
+                child: Text(
+                  'DELIVER',
+                  style: TextStyle(color: Colors.orange, fontFamily: 'Sen'),
+                ),
               ),
-              SizedBox(height: 16),
-              Divider(thickness: 1),
-              Text('Total Payment', style: TextStyle(fontFamily: 'Sen', fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              _priceRow('Total Price', 'Rp120.000'),
-              _priceRow('Delivery Fee', 'Rp6.000'),
-              _priceRow('TOTAL', 'Rp126.000', isBold: true),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                orderStatus = OrderStatus.delivering;
-              });
-            },
-            child: Text('DELIVER', style: TextStyle(color: Colors.orange, fontFamily: 'Sen')),
-          ),
-        ],
-      ),
     );
   }
 
-  Widget _restaurantCard({required String name, required List<Map<String, dynamic>> items, String? note}) {
+  Widget _restaurantCard({
+    required String name,
+    required List<Map<String, dynamic>> items,
+    String? note,
+  }) {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -266,18 +342,36 @@ class _MainPageState extends State<MainPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Sen')),
+          Text(
+            name,
+            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Sen'),
+          ),
           SizedBox(height: 8),
-          ...items.map((item) => Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('${item['name']} x${item['qty']}', style: TextStyle(fontFamily: 'Sen')),
-              Text('Rp${(item['price'] as int).toStringAsFixed(0)}', style: TextStyle(fontFamily: 'Sen')),
-            ],
-          )),
+          ...items.map(
+            (item) => Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${item['name']} x${item['qty']}',
+                  style: TextStyle(fontFamily: 'Sen'),
+                ),
+                Text(
+                  'Rp${(item['price'] as int).toStringAsFixed(0)}',
+                  style: TextStyle(fontFamily: 'Sen'),
+                ),
+              ],
+            ),
+          ),
           if (note != null) ...[
             SizedBox(height: 6),
-            Text('Catatan: $note', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, fontFamily: 'Sen')),
+            Text(
+              'Catatan: $note',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                fontFamily: 'Sen',
+              ),
+            ),
           ],
         ],
       ),
@@ -290,8 +384,20 @@ class _MainPageState extends State<MainPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontFamily: 'Sen', fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
-          Text(value, style: TextStyle(fontFamily: 'Sen', fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Sen',
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'Sen',
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
         ],
       ),
     );
