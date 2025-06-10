@@ -4,6 +4,7 @@ import 'activity_page.dart';
 import '../services/order_service.dart';
 import '../models/order.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 void main() => runApp(MyApp());
 
@@ -47,6 +48,14 @@ class _MainPageState extends State<MainPage> {
     checkLoginStatus();
     loadOrders();
     loadPorter();
+  }
+
+  Timer? _timer;
+
+  void startInterval() {
+    _timer = Timer.periodic(Duration(seconds: 30), (timer) {
+      loadOrders();
+    });
   }
 
   Future<void> loadOrders() async {
