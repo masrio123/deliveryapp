@@ -203,7 +203,7 @@ class OrderService {
       final uri = Uri.parse('$baseURL/porters/$orderId/deliver');
       print('🌐 [DEBUG] Mengirim permintaan DELIVER ke: $uri');
 
-      final response = await http.post(
+      final response = await http.put(
         uri,
         headers: {
           'Authorization': 'Bearer $token',

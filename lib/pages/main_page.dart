@@ -248,6 +248,17 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  Future<void> _handleDeliver(int orderId) async {
+    try {
+      final message = await OrderService.deliverOrder(orderId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      _showErrorSnackBar('Error deliver: $e');
+    }
+  }
+
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
@@ -311,6 +322,7 @@ class _MainPageState extends State<MainPage> {
             actions: [
               TextButton(
                 onPressed: () {
+                  _handleDeliver(order.orderId);
                   Navigator.pop(context);
                   setState(() => orderStatuses[index] = OrderStatus.delivering);
                 },
