@@ -3,6 +3,7 @@ import 'package:petraporter_deliveryapp/pages/account_page.dart';
 import 'activity_page.dart';
 import '../services/order_service.dart';
 import '../models/order.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(MyApp());
 
@@ -35,6 +36,7 @@ class _MainPageState extends State<MainPage> {
   bool isLoading = true;
   bool isOnline = true;
   int currentIndex = 1;
+  String username = "";
 
   int orderCount = 0;
   int incomeCount = 0;
@@ -42,6 +44,7 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
+    checkLoginStatus();
     loadOrders();
     loadPorter();
   }
@@ -71,6 +74,14 @@ class _MainPageState extends State<MainPage> {
       print('Error fetching orders: $e');
       setState(() => isLoading = false);
     }
+  }
+
+  void checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_name') ?? 'lorem';
+    setState(() {
+      username = name;
+    });
   }
 
   @override
@@ -111,7 +122,7 @@ class _MainPageState extends State<MainPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Hello, Jovan',
+                'Hello, $username',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
               ),
               Switch(

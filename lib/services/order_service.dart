@@ -74,6 +74,62 @@ class OrderService {
     }
   }
 
+  static Future<List<Order>> fetchActivity() async {
+    try {
+      final token = await getToken();
+      final porterId = await getPorterId();
+
+      if (token == null || porterId == null) {
+        throw Exception(
+          'Token atau Porter ID tidak ditemukan. Harap login kembali.',
+        );
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseURL/porters/$porterId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print(
+          '📨 [DEBUG] Response body for fetchActiveOrder: ${response.body}',
+        );
+        try {
+          final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+          if (responseData['success'] != true) {
+            throw Exception(
+              'Status success bernilai false: ${responseData['message'] ?? 'Pesan tidak diketahui'}',
+            );
+          }
+
+          if (responseData['data'] == null || responseData['data'] is! List) {
+            throw Exception('Data tidak ditemukan atau bukan List');
+          }
+
+          final List<dynamic> data = responseData['data'];
+
+          return data.map((json) => Order.fromJson(json)).toList();
+        } catch (e) {
+          print('❌ [DEBUG] Gagal parsing JSON di fetchActiveOrder: $e');
+          throw Exception('Gagal memproses data dari server');
+        }
+      } else {
+        print(
+          '❌ [DEBUG] Status bukan 200 di fetchActiveOrder: ${response.statusCode}',
+        );
+        print('📨 [DEBUG] Response body di fetchActiveOrder: ${response.body}');
+        throw Exception('Gagal mengambil data: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ [ERROR] fetchActiveOrder exception: $e');
+      rethrow; // Melemparkan kembali exception agar bisa ditangkap di UI/caller
+    }
+  }
+
   // Fungsi untuk menerima pesanan
   static Future<String> acceptOrder(int orderId) async {
     print("orderid: $orderId");
