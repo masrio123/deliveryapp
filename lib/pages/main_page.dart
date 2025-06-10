@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:petraporter_deliveryapp/pages/account_page.dart';
-import 'activity_page.dart'; // pastikan file ini ada
+import 'activity_page.dart';
+import '../services/order_service.dart';
+import '../models/order.dart';
 
 void main() {
   runApp(MyApp());
@@ -30,11 +32,34 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
+  List<Order> orders = [];
+  List<OrderStatus> orderStatuses = [];
+  bool isLoading = true;
   bool isOnline = true;
-  OrderStatus orderStatus = OrderStatus.none;
-
-  // Start app on Activity page
   int currentIndex = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    loadOrders();
+  }
+
+  Future<void> loadOrders() async {
+    try {
+      final result = await OrderService.fetchActiveOrder();
+
+      setState(() {
+        orders = result;
+        orderStatuses = List.generate(result.length, (_) => OrderStatus.none);
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching orders: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,11 +87,7 @@ class _MainPageState extends State<MainPage> {
       body: SafeArea(
         child: IndexedStack(
           index: currentIndex,
-          children: [
-            _buildOrderPage(),
-            ActivityPage(), // pastikan ada file activity_page.dart
-            AccountPage(),
-          ],
+          children: [_buildOrderPage(), ActivityPage(), AccountPage()],
         ),
       ),
     );
@@ -78,7 +99,7 @@ class _MainPageState extends State<MainPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Online status
+          // Greeting and switch
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -86,7 +107,6 @@ class _MainPageState extends State<MainPage> {
                 'Hello, Jovan',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: Colors.black,
                   fontSize: 18,
                   fontFamily: 'Sen',
                 ),
@@ -94,16 +114,12 @@ class _MainPageState extends State<MainPage> {
               Switch(
                 value: isOnline,
                 activeColor: Colors.green,
-                onChanged: (val) {
-                  setState(() {
-                    isOnline = val;
-                  });
-                },
+                onChanged: (val) => setState(() => isOnline = val),
               ),
             ],
           ),
           SizedBox(height: 20),
-          // Summary box
+          // Summary
           Container(
             padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             decoration: BoxDecoration(
@@ -120,7 +136,6 @@ class _MainPageState extends State<MainPage> {
             ),
           ),
           SizedBox(height: 30),
-          // Order requests
           Text(
             'Order Requests',
             style: TextStyle(
@@ -130,11 +145,33 @@ class _MainPageState extends State<MainPage> {
             ),
           ),
           SizedBox(height: 16),
-          if (orderStatus != OrderStatus.finished)
-            _orderCard(
-              imageUrl: 'https://i.pravatar.cc/100',
-              name: 'Reyhan',
-              price: 'Rp126.000',
+          if (isLoading)
+            Center(child: CircularProgressIndicator())
+          else if (orders.isEmpty)
+            Text('No active orders.')
+          else
+            Column(
+              children: List.generate(orders.length, (index) {
+                final order = orders[index];
+                return _orderCard(
+                  imageUrl: 'https://i.pravatar.cc/100',
+                  name: order.customerName,
+                  price: 'Rp${order.grandTotal}',
+                  status: orderStatuses[index],
+                  onAccept: () {
+                    setState(() => orderStatuses[index] = OrderStatus.accepted);
+                  },
+                  onDecline: () {
+                    setState(() => orderStatuses[index] = OrderStatus.finished);
+                  },
+                  onDetails: () {
+                    _showOrderDetailsDialog(index);
+                  },
+                  onFinish: () {
+                    setState(() => orderStatuses[index] = OrderStatus.finished);
+                  },
+                );
+              }),
             ),
         ],
       ),
@@ -158,7 +195,6 @@ class _MainPageState extends State<MainPage> {
           style: TextStyle(
             fontSize: 12,
             color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
             fontFamily: 'Sen',
           ),
         ),
@@ -170,6 +206,11 @@ class _MainPageState extends State<MainPage> {
     required String imageUrl,
     required String name,
     required String price,
+    required OrderStatus status,
+    required VoidCallback onAccept,
+    required VoidCallback onDecline,
+    required VoidCallback onDetails,
+    required VoidCallback onFinish,
   }) {
     return Container(
       padding: EdgeInsets.all(16),
@@ -206,31 +247,19 @@ class _MainPageState extends State<MainPage> {
               ],
             ),
           ),
-          if (orderStatus == OrderStatus.none) ...[
-            _roundedButton('Accept', Color(0xFFFF7622), Colors.white, () {
-              setState(() {
-                orderStatus = OrderStatus.accepted;
-              });
-            }),
+          if (status == OrderStatus.none) ...[
+            _roundedButton('Accept', Color(0xFFFF7622), Colors.white, onAccept),
             SizedBox(width: 8),
-            _roundedButton('Decline', Colors.red, Colors.white, () {
-              setState(() {
-                orderStatus = OrderStatus.finished;
-              });
-            }),
-          ] else if (orderStatus == OrderStatus.accepted) ...[
+            _roundedButton('Decline', Colors.red, Colors.white, onDecline),
+          ] else if (status == OrderStatus.accepted) ...[
+            _roundedButton('Details', Colors.orange, Colors.white, onDetails),
+          ] else if (status == OrderStatus.delivering) ...[
             _roundedButton(
-              'Details',
-              Colors.orange,
+              'Finish Order',
+              Colors.green,
               Colors.white,
-              _showOrderDetailsDialog,
+              onFinish,
             ),
-          ] else if (orderStatus == OrderStatus.delivering) ...[
-            _roundedButton('Finish Order', Colors.green, Colors.white, () {
-              setState(() {
-                orderStatus = OrderStatus.finished;
-              });
-            }),
           ],
         ],
       ),
@@ -248,7 +277,6 @@ class _MainPageState extends State<MainPage> {
       style: ElevatedButton.styleFrom(
         backgroundColor: bgColor,
         foregroundColor: textColor,
-        elevation: 0,
         padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         textStyle: TextStyle(
@@ -261,7 +289,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _showOrderDetailsDialog() {
+  void _showOrderDetailsDialog(int index) {
     showDialog(
       context: context,
       builder:
@@ -314,9 +342,7 @@ class _MainPageState extends State<MainPage> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  setState(() {
-                    orderStatus = OrderStatus.delivering;
-                  });
+                  setState(() => orderStatuses[index] = OrderStatus.delivering);
                 },
                 child: Text(
                   'DELIVER',
@@ -355,10 +381,7 @@ class _MainPageState extends State<MainPage> {
                   '${item['name']} x${item['qty']}',
                   style: TextStyle(fontFamily: 'Sen'),
                 ),
-                Text(
-                  'Rp${(item['price'] as int).toStringAsFixed(0)}',
-                  style: TextStyle(fontFamily: 'Sen'),
-                ),
+                Text('Rp${item['price']}', style: TextStyle(fontFamily: 'Sen')),
               ],
             ),
           ),
