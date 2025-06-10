@@ -236,4 +236,54 @@ class OrderService {
       rethrow;
     }
   }
+
+  static Future<String> finishOrder(int orderId) async {
+    print("order id untuk di finish $orderId");
+    try {
+      final token = await getToken();
+      final porterId =
+          await getPorterId(); // Bisa diabaikan jika tidak dipakai di backend
+
+      if (token == null || porterId == null) {
+        throw Exception(
+          'Token atau Porter ID tidak ditemukan. Harap login kembali.',
+        );
+      }
+
+      final uri = Uri.parse('$baseURL/porters/$orderId/finish');
+      print('🌐 [DEBUG] Mengirim permintaan FINISH ke: $uri');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'order_id': orderId, // Bisa dihapus jika backend tidak memerlukannya
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return responseData['message'] ?? 'Pesanan telah selesai.';
+        } else {
+          throw Exception(
+            responseData['message'] ?? 'Gagal menyelesaikan pesanan.',
+          );
+        }
+      } else {
+        print(
+          '❌ [DEBUG] Status bukan 200 di finishOrder: ${response.statusCode}',
+        );
+        print('📨 [DEBUG] Response body: ${response.body}');
+        throw Exception('Gagal menyelesaikan pesanan: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ [ERROR] finishOrder exception: $e');
+      rethrow;
+    }
+  }
 }

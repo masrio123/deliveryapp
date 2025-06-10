@@ -183,8 +183,9 @@ class _MainPageState extends State<MainPage> {
   }
 
   List<Widget> _buildOrderActions(Order order, int index) {
+    print("order status item => " + order.orderStatus);
     switch (order.orderStatus) {
-      case 'waitting':
+      case 'waiting':
         return [
           _roundedButton(
             'Accept',
@@ -210,17 +211,14 @@ class _MainPageState extends State<MainPage> {
           ),
         ];
       default:
-        return orderStatuses[index] == OrderStatus.delivering
-            ? [
-              _roundedButton(
-                'Finish Order',
-                Colors.green,
-                Colors.white,
-                () =>
-                    setState(() => orderStatuses[index] = OrderStatus.finished),
-              ),
-            ]
-            : [];
+        return [
+          _roundedButton(
+            'Finish Order',
+            Colors.green,
+            Colors.white,
+            () => _handleFinish(order.orderId),
+          ),
+        ];
     }
   }
 
@@ -231,6 +229,7 @@ class _MainPageState extends State<MainPage> {
         SnackBar(content: Text(message), backgroundColor: Colors.green),
       );
       setState(() => orderStatuses[index] = OrderStatus.accepted);
+      loadOrders();
     } catch (e) {
       _showErrorSnackBar('Error accepting order: $e');
     }
@@ -243,6 +242,7 @@ class _MainPageState extends State<MainPage> {
         SnackBar(content: Text(message), backgroundColor: Colors.orange),
       );
       setState(() => orderStatuses[index] = OrderStatus.finished);
+      loadOrders();
     } catch (e) {
       _showErrorSnackBar('Error declining order: $e');
     }
@@ -254,6 +254,19 @@ class _MainPageState extends State<MainPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: Colors.green),
       );
+      loadOrders();
+    } catch (e) {
+      _showErrorSnackBar('Error deliver: $e');
+    }
+  }
+
+  Future<void> _handleFinish(int orderId) async {
+    try {
+      final message = await OrderService.finishOrder(orderId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.green),
+      );
+      loadOrders();
     } catch (e) {
       _showErrorSnackBar('Error deliver: $e');
     }
