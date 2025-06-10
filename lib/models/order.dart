@@ -94,3 +94,17 @@ class ProductItem {
     );
   }
 }
+
+class WorkSummary {
+  final int total_orders_handled;
+  final int total_income;
+
+  WorkSummary({required this.total_orders_handled, required this.total_income});
+
+  factory WorkSummary.fromJson(Map<String, dynamic> json) {
+    return WorkSummary(
+      total_orders_handled: json['total_orders_handled'],
+      total_income: json['total_income'],
+    );
+  }
+}

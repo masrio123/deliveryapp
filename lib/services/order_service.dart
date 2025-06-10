@@ -286,4 +286,60 @@ class OrderService {
       rethrow;
     }
   }
+
+  static Future<WorkSummary> fetchWorkSummary() async {
+    try {
+      final token = await getToken();
+      final porterId = await getPorterId();
+
+      if (token == null || porterId == null) {
+        throw Exception(
+          'Token atau Porter ID tidak ditemukan. Harap login kembali.',
+        );
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseURL/porters/$porterId/workSummary'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print(
+          '📨 [DEBUG] Response body for fetchWorkSummary: ${response.body}',
+        );
+        try {
+          final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+          if (responseData['success'] != true) {
+            throw Exception(
+              'Status success bernilai false: ${responseData['message'] ?? 'Pesan tidak diketahui'}',
+            );
+          }
+
+          if (responseData['data'] == null || responseData['data'] is! Map) {
+            throw Exception('Data tidak ditemukan atau bukan objek');
+          }
+
+          final Map<String, dynamic> data = responseData['data'];
+
+          return WorkSummary.fromJson(data);
+        } catch (e) {
+          print('❌ [DEBUG] Gagal parsing JSON di fetchWorkSummary: $e');
+          throw Exception('Gagal memproses data dari server');
+        }
+      } else {
+        print(
+          '❌ [DEBUG] Status bukan 200 di fetchWorkSummary: ${response.statusCode}',
+        );
+        print('📨 [DEBUG] Response body di fetchWorkSummary: ${response.body}');
+        throw Exception('Gagal mengambil data: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ [ERROR] fetchWorkSummary exception: $e');
+      rethrow;
+    }
+  }
 }

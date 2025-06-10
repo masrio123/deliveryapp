@@ -36,10 +36,14 @@ class _MainPageState extends State<MainPage> {
   bool isOnline = true;
   int currentIndex = 1;
 
+  int orderCount = 0;
+  int incomeCount = 0;
+
   @override
   void initState() {
     super.initState();
     loadOrders();
+    loadPorter();
   }
 
   Future<void> loadOrders() async {
@@ -49,6 +53,19 @@ class _MainPageState extends State<MainPage> {
         orders = result;
         orderStatuses = List.generate(result.length, (_) => OrderStatus.none);
         isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching orders: $e');
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> loadPorter() async {
+    try {
+      final result = await OrderService.fetchWorkSummary();
+      setState(() {
+        orderCount = result.total_orders_handled;
+        incomeCount = result.total_income;
       });
     } catch (e) {
       print('Error fetching orders: $e');
@@ -137,9 +154,9 @@ class _MainPageState extends State<MainPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _summaryBox('0', 'ORDERS'),
+          _summaryBox(orderCount.toString(), 'ORDERS'),
           Container(width: 1, height: 40, color: Colors.grey.shade400),
-          _summaryBox('Rp0', 'TOTAL INCOME'),
+          _summaryBox(incomeCount.toString(), 'TOTAL INCOME'),
         ],
       ),
     );
@@ -267,6 +284,7 @@ class _MainPageState extends State<MainPage> {
         SnackBar(content: Text(message), backgroundColor: Colors.green),
       );
       loadOrders();
+      loadPorter();
     } catch (e) {
       _showErrorSnackBar('Error deliver: $e');
     }
