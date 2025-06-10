@@ -4,9 +4,7 @@ import 'activity_page.dart';
 import '../services/order_service.dart';
 import '../models/order.dart';
 
-void main() {
-  runApp(MyApp());
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
   @override
@@ -47,7 +45,6 @@ class _MainPageState extends State<MainPage> {
   Future<void> loadOrders() async {
     try {
       final result = await OrderService.fetchActiveOrder();
-
       setState(() {
         orders = result;
         orderStatuses = List.generate(result.length, (_) => OrderStatus.none);
@@ -55,9 +52,7 @@ class _MainPageState extends State<MainPage> {
       });
     } catch (e) {
       print('Error fetching orders: $e');
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
 
@@ -66,11 +61,7 @@ class _MainPageState extends State<MainPage> {
     return Scaffold(
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
-        onTap: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        },
+        onTap: (index) => setState(() => currentIndex = index),
         selectedItemColor: Color(0xFFFF7622),
         unselectedItemColor: Colors.grey[600],
         selectedLabelStyle: TextStyle(fontFamily: 'Sen'),
@@ -99,17 +90,12 @@ class _MainPageState extends State<MainPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting and switch
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Hello, Jovan',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                  fontFamily: 'Sen',
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
               ),
               Switch(
                 value: isOnline,
@@ -119,30 +105,11 @@ class _MainPageState extends State<MainPage> {
             ],
           ),
           SizedBox(height: 20),
-          // Summary
-          Container(
-            padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _summaryBox('0', 'ORDERS'),
-                Container(width: 1, height: 40, color: Colors.grey.shade400),
-                _summaryBox('Rp0', 'TOTAL INCOME'),
-              ],
-            ),
-          ),
+          _buildSummary(),
           SizedBox(height: 30),
           Text(
             'Order Requests',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              fontFamily: 'Sen',
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           SizedBox(height: 16),
           if (isLoading)
@@ -150,68 +117,35 @@ class _MainPageState extends State<MainPage> {
           else if (orders.isEmpty)
             Text('No active orders.')
           else
-            Column(
-              children: List.generate(orders.length, (index) {
-                final order = orders[index];
-                return _orderCard(
-                  imageUrl: 'https://i.pravatar.cc/100',
-                  name: order.customerName,
-                  price: 'Rp${order.grandTotal}',
-                  status: orderStatuses[index],
-                  onAccept: () {
-                    setState(() => orderStatuses[index] = OrderStatus.accepted);
-                  },
-                  onDecline: () {
-                    setState(() => orderStatuses[index] = OrderStatus.finished);
-                  },
-                  onDetails: () {
-                    _showOrderDetailsDialog(index);
-                  },
-                  onFinish: () {
-                    setState(() => orderStatuses[index] = OrderStatus.finished);
-                  },
-                );
-              }),
-            ),
+            ...orders
+                .asMap()
+                .entries
+                .map((entry) => _buildOrderCard(entry.key, entry.value))
+                .toList(),
         ],
       ),
     );
   }
 
-  Widget _summaryBox(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Sen',
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-            fontFamily: 'Sen',
-          ),
-        ),
-      ],
+  Widget _buildSummary() {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _summaryBox('0', 'ORDERS'),
+          Container(width: 1, height: 40, color: Colors.grey.shade400),
+          _summaryBox('Rp0', 'TOTAL INCOME'),
+        ],
+      ),
     );
   }
 
-  Widget _orderCard({
-    required String imageUrl,
-    required String name,
-    required String price,
-    required OrderStatus status,
-    required VoidCallback onAccept,
-    required VoidCallback onDecline,
-    required VoidCallback onDetails,
-    required VoidCallback onFinish,
-  }) {
+  Widget _buildOrderCard(int index, Order order) {
     return Container(
       padding: EdgeInsets.all(16),
       margin: EdgeInsets.only(bottom: 12),
@@ -221,46 +155,228 @@ class _MainPageState extends State<MainPage> {
       ),
       child: Row(
         children: [
-          CircleAvatar(backgroundImage: NetworkImage(imageUrl), radius: 26),
+          CircleAvatar(
+            backgroundImage: NetworkImage('https://i.pravatar.cc/100'),
+            radius: 26,
+          ),
           SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    fontFamily: 'Sen',
-                  ),
+                  order.customerName ?? 'Unknown Customer',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 SizedBox(height: 4),
                 Text(
-                  price,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                    fontFamily: 'Sen',
-                  ),
+                  'Rp${order.totalPrice ?? 0}',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                 ),
               ],
             ),
           ),
-          if (status == OrderStatus.none) ...[
-            _roundedButton('Accept', Color(0xFFFF7622), Colors.white, onAccept),
-            SizedBox(width: 8),
-            _roundedButton('Decline', Colors.red, Colors.white, onDecline),
-          ] else if (status == OrderStatus.accepted) ...[
-            _roundedButton('Details', Colors.orange, Colors.white, onDetails),
-          ] else if (status == OrderStatus.delivering) ...[
-            _roundedButton(
-              'Finish Order',
-              Colors.green,
-              Colors.white,
-              onFinish,
+          ..._buildOrderActions(order, index),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildOrderActions(Order order, int index) {
+    switch (order.orderStatus) {
+      case 'waitting':
+        return [
+          _roundedButton(
+            'Accept',
+            Color(0xFFFF7622),
+            Colors.white,
+            () => _handleAccept(order.orderId, index),
+          ),
+          SizedBox(width: 8),
+          _roundedButton(
+            'Decline',
+            Colors.red,
+            Colors.white,
+            () => _handleDecline(order.orderId, index),
+          ),
+        ];
+      case 'received':
+        return [
+          _roundedButton(
+            'Details',
+            Colors.orange,
+            Colors.white,
+            () => _showOrderDetailsDialog(index, order),
+          ),
+        ];
+      default:
+        return orderStatuses[index] == OrderStatus.delivering
+            ? [
+              _roundedButton(
+                'Finish Order',
+                Colors.green,
+                Colors.white,
+                () =>
+                    setState(() => orderStatuses[index] = OrderStatus.finished),
+              ),
+            ]
+            : [];
+    }
+  }
+
+  Future<void> _handleAccept(int orderId, int index) async {
+    try {
+      final message = await OrderService.acceptOrder(orderId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.green),
+      );
+      setState(() => orderStatuses[index] = OrderStatus.accepted);
+    } catch (e) {
+      _showErrorSnackBar('Error accepting order: $e');
+    }
+  }
+
+  Future<void> _handleDecline(int orderId, int index) async {
+    try {
+      final message = await OrderService.rejectOrder(orderId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.orange),
+      );
+      setState(() => orderStatuses[index] = OrderStatus.finished);
+    } catch (e) {
+      _showErrorSnackBar('Error declining order: $e');
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  Widget _summaryBox(String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 4),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+      ],
+    );
+  }
+
+  void _showOrderDetailsDialog(int index, Order order) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text(
+              'Order Details',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...order.items.map(
+                    (item) => _restaurantCard(
+                      name: item.tenantName,
+                      items:
+                          item.items
+                              .map(
+                                (p) => {
+                                  'name': p.productName,
+                                  'qty': p.quantity,
+                                  'price': p.price,
+                                },
+                              )
+                              .toList(),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Divider(thickness: 1),
+                  Text(
+                    'Total Payment',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  _priceRow('Total Price', 'Rp${order.totalPrice}'),
+                  _priceRow('Delivery Fee', 'Rp${order.shippingCost}'),
+                  _priceRow('TOTAL', 'Rp${order.grandTotal}', isBold: true),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() => orderStatuses[index] = OrderStatus.delivering);
+                },
+                child: Text('DELIVER', style: TextStyle(color: Colors.orange)),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _restaurantCard({
+    required String name,
+    required List<Map<String, dynamic>> items,
+    String? note,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(name, style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          ...items.map(
+            (item) => Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('${item['name']} x${item['qty']}'),
+                Text('Rp${item['price']}'),
+              ],
+            ),
+          ),
+          if (note != null) ...[
+            SizedBox(height: 6),
+            Text(
+              'Catatan: $note',
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _priceRow(String label, String value, {bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
         ],
       ),
     );
@@ -279,150 +395,9 @@ class _MainPageState extends State<MainPage> {
         foregroundColor: textColor,
         padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          fontFamily: 'Sen',
-        ),
+        textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
       child: Text(text),
-    );
-  }
-
-  void _showOrderDetailsDialog(int index) {
-    showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: Text(
-              'Order Details',
-              style: TextStyle(fontFamily: 'Sen', fontWeight: FontWeight.bold),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _restaurantCard(
-                    name: 'Ndokee Express',
-                    items: [
-                      {'name': 'Nasi Goreng Ayam', 'qty': 1, 'price': 30000},
-                      {
-                        'name': 'Nasi Goreng Hongkong',
-                        'qty': 1,
-                        'price': 30000,
-                      },
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                  _restaurantCard(
-                    name: 'Depot Kita',
-                    items: [
-                      {'name': 'Mie Goreng', 'qty': 1, 'price': 30000},
-                      {'name': 'Nasi Empal', 'qty': 1, 'price': 30000},
-                    ],
-                    note: 'extra garam sama msg',
-                  ),
-                  SizedBox(height: 16),
-                  Divider(thickness: 1),
-                  Text(
-                    'Total Payment',
-                    style: TextStyle(
-                      fontFamily: 'Sen',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  _priceRow('Total Price', 'Rp120.000'),
-                  _priceRow('Delivery Fee', 'Rp6.000'),
-                  _priceRow('TOTAL', 'Rp126.000', isBold: true),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  setState(() => orderStatuses[index] = OrderStatus.delivering);
-                },
-                child: Text(
-                  'DELIVER',
-                  style: TextStyle(color: Colors.orange, fontFamily: 'Sen'),
-                ),
-              ),
-            ],
-          ),
-    );
-  }
-
-  Widget _restaurantCard({
-    required String name,
-    required List<Map<String, dynamic>> items,
-    String? note,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            name,
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Sen'),
-          ),
-          SizedBox(height: 8),
-          ...items.map(
-            (item) => Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${item['name']} x${item['qty']}',
-                  style: TextStyle(fontFamily: 'Sen'),
-                ),
-                Text('Rp${item['price']}', style: TextStyle(fontFamily: 'Sen')),
-              ],
-            ),
-          ),
-          if (note != null) ...[
-            SizedBox(height: 6),
-            Text(
-              'Catatan: $note',
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                fontFamily: 'Sen',
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _priceRow(String label, String value, {bool isBold = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Sen',
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: 'Sen',
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
