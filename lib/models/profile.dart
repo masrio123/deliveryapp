@@ -20,3 +20,13 @@ class PorterProfile {
     );
   }
 }
+
+class PorterStatus {
+  final bool porterIsOnline;
+
+  PorterStatus({required this.porterIsOnline});
+
+  factory PorterStatus.fromJson(Map<String, dynamic> json) {
+    return PorterStatus(porterIsOnline: json['porter_isOnline']);
+  }
+}

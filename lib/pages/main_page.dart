@@ -4,6 +4,7 @@ import 'activity_page.dart';
 import '../services/order_service.dart';
 import '../models/order.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/profile_service.dart';
 import 'dart:async';
 
 void main() => runApp(MyApp());
@@ -35,7 +36,8 @@ class _MainPageState extends State<MainPage> {
   List<Order> orders = [];
   List<OrderStatus> orderStatuses = [];
   bool isLoading = true;
-  bool isOnline = true;
+  bool _isToggling = false;
+  bool isOnline = false;
   int currentIndex = 1;
   String username = "";
 
@@ -46,6 +48,7 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
     checkLoginStatus();
+    loadStatusPorter();
     loadOrders();
     loadPorter();
   }
@@ -78,6 +81,18 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         orderCount = result.total_orders_handled;
         incomeCount = result.total_income;
+      });
+    } catch (e) {
+      print('Error fetching orders: $e');
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> loadStatusPorter() async {
+    try {
+      final result = await PorterService.getPorterOnlineStatus();
+      setState(() {
+        isOnline = result.porterIsOnline;
       });
     } catch (e) {
       print('Error fetching orders: $e');
@@ -137,7 +152,42 @@ class _MainPageState extends State<MainPage> {
               Switch(
                 value: isOnline,
                 activeColor: Colors.green,
-                onChanged: (val) => setState(() => isOnline = val),
+                onChanged:
+                    _isToggling
+                        ? null // Disable sementara jika sedang update
+                        : (val) async {
+                          setState(() {
+                            _isToggling = true;
+                          });
+
+                          final success =
+                              await PorterService.updatePorterOnlineStatus(val);
+
+                          if (success) {
+                            setState(() {
+                              isOnline = val;
+                              _isToggling = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  val
+                                      ? 'Status online diaktifkan.'
+                                      : 'Status online dinonaktifkan.',
+                                ),
+                              ),
+                            );
+                          } else {
+                            setState(() {
+                              _isToggling = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Gagal mengubah status online.'),
+                              ),
+                            );
+                          }
+                        },
               ),
             ],
           ),
