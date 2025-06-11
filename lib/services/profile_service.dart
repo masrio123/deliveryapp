@@ -63,7 +63,7 @@ class PorterService {
       }
 
       final response = await http.post(
-        Uri.parse('$baseURL/tenants/$porterId/toggle-is-open'),
+        Uri.parse('$baseURL/porter/$porterId/toggle-is-open'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -93,7 +93,7 @@ class PorterService {
       }
 
       final response = await http.put(
-        Uri.parse('$baseURL/tenants/$porterId/toggle-is-open'),
+        Uri.parse('$baseURL/porter/$porterId/toggle-is-open'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
