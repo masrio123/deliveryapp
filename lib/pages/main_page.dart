@@ -57,7 +57,7 @@ class _MainPageState extends State<MainPage> {
   Timer? _timer;
 
   void startInterval() {
-    _timer = Timer.periodic(Duration(seconds: 5), (timer) {
+    _timer = Timer.periodic(Duration(seconds: 10), (timer) {
       print("order di reload");
       loadOrders();
     });
