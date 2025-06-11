@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/profile_service.dart';
+import '../models/profile.dart';
 
 class AccountPage extends StatefulWidget {
   @override
@@ -6,14 +8,39 @@ class AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<AccountPage> {
-  final TextEditingController _rekeningController = TextEditingController(
-    text: '11211210',
-  );
+  PorterProfile? _profile;
+  bool _isLoading = true;
   bool _isEditing = false;
+
+  final TextEditingController _rekeningController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await PorterService.fetchPorterProfile();
+      setState(() {
+        _profile = profile;
+        _rekeningController.text = profile.accountNumber;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Gagal load profile: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal memuat profil')));
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   void _toggleEditSave() {
     if (_isEditing) {
-      // Save mode
       final rekening = _rekeningController.text.trim();
       if (rekening.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -22,19 +49,15 @@ class _AccountPageState extends State<AccountPage> {
         return;
       }
 
+      // Simpan ke server (opsional)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Nomor rekening berhasil disimpan: $rekening')),
       );
-
-      setState(() {
-        _isEditing = false;
-      });
-    } else {
-      // Edit mode
-      setState(() {
-        _isEditing = true;
-      });
     }
+
+    setState(() {
+      _isEditing = !_isEditing;
+    });
   }
 
   @override
@@ -57,135 +80,135 @@ class _AccountPageState extends State<AccountPage> {
       backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.fromLTRB(30, 22, 30, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'My Profile',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Sen',
-              ),
-            ),
-            const SizedBox(height: 30),
-            Row(
-              children: const [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: NetworkImage(
-                    'https://i.pravatar.cc/150?img=18',
-                  ),
-                ),
-                SizedBox(width: 16),
-                Column(
+        child:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _profile == null
+                ? const Center(child: Text('Profil tidak tersedia'))
+                : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Jovan Marcell',
+                    const Text(
+                      'My Profile',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                         fontFamily: 'Sen',
                       ),
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Porter',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                        fontFamily: 'Sen',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Divider(),
-
-            _ProfileItem(label: 'Jurusan', value: 'Informatika'),
-            _ProfileItem(label: 'Angkatan', value: '2021'),
-            _ProfileItem(label: 'NRP', value: 'c14290001'),
-            _RatingItem(),
-
-            // Editable Nomor Rekening with Edit/Save button
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 30),
+                    Row(
                       children: [
-                        const Text(
-                          'Nomor Rekening',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black,
-                            fontFamily: 'Sen',
+                        const CircleAvatar(
+                          radius: 30,
+                          backgroundImage: NetworkImage(
+                            'https://i.pravatar.cc/150?img=18',
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        _isEditing
-                            ? TextField(
-                              controller: _rekeningController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 12,
-                                ),
-                                border: OutlineInputBorder(),
-                              ),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _profile!.porterName,
                               style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Sen',
-                              ),
-                            )
-                            : Text(
-                              _rekeningController.text,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
                                 fontFamily: 'Sen',
                               ),
                             ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Porter',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                                fontFamily: 'Sen',
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    _ProfileItem(label: 'Jurusan', value: _profile!.department),
+                    _ProfileItem(label: 'NRP', value: _profile!.porterNrp),
+                    _RatingItem(),
 
-                  const SizedBox(width: 12),
-
-                  ElevatedButton(
-                    onPressed: _toggleEditSave,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: buttonColor,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
+                    // Rekening
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Nomor Rekening',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontFamily: 'Sen',
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                _isEditing
+                                    ? TextField(
+                                      controller: _rekeningController,
+                                      keyboardType: TextInputType.number,
+                                      decoration: const InputDecoration(
+                                        isDense: true,
+                                        contentPadding: EdgeInsets.symmetric(
+                                          vertical: 8,
+                                          horizontal: 12,
+                                        ),
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Sen',
+                                      ),
+                                    )
+                                    : Text(
+                                      _rekeningController.text,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Sen',
+                                      ),
+                                    ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: _toggleEditSave,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: buttonColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              _isEditing ? 'Save' : 'Edit',
+                              style: buttonTextStyle,
+                            ),
+                          ),
+                        ],
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
                     ),
-                    child: Text(
-                      _isEditing ? 'Save' : 'Edit',
-                      style: buttonTextStyle,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const Divider(),
-          ],
-        ),
+                    const Divider(),
+                  ],
+                ),
       ),
     );
   }

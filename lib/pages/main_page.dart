@@ -157,6 +157,11 @@ class _MainPageState extends State<MainPage> {
             ...orders
                 .asMap()
                 .entries
+                .where(
+                  (entry) =>
+                      entry.value.orderStatus != 'canceled' &&
+                      entry.value.orderStatus != 'received',
+                )
                 .map((entry) => _buildOrderCard(entry.key, entry.value))
                 .toList(),
         ],
@@ -247,7 +252,7 @@ class _MainPageState extends State<MainPage> {
             () => _showOrderDetailsDialog(index, order),
           ),
         ];
-      default:
+      case 'on-delivery':
         return [
           _roundedButton(
             'Finish Order',
@@ -256,6 +261,8 @@ class _MainPageState extends State<MainPage> {
             () => _handleFinish(order.orderId),
           ),
         ];
+      default:
+        return [];
     }
   }
 
