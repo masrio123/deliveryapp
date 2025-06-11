@@ -26,8 +26,8 @@ class PorterService {
         );
       }
 
-      final response = await http.get(
-        Uri.parse('$baseURL/api/porters/profile/$porterId'),
+      final response = await http.post(
+        Uri.parse('$baseURL/porters/profile/$porterId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
