@@ -51,18 +51,21 @@ class _MainPageState extends State<MainPage> {
     loadStatusPorter();
     loadOrders();
     loadPorter();
+    startInterval();
   }
 
   Timer? _timer;
 
   void startInterval() {
-    _timer = Timer.periodic(Duration(seconds: 30), (timer) {
+    _timer = Timer.periodic(Duration(seconds: 5), (timer) {
+      print("order di reload");
       loadOrders();
     });
   }
 
   Future<void> loadOrders() async {
     try {
+      isLoading = true;
       final result = await OrderService.fetchActiveOrder();
       setState(() {
         orders = result;
@@ -209,7 +212,7 @@ class _MainPageState extends State<MainPage> {
                 .entries
                 .where(
                   (entry) =>
-                      entry.value.orderStatus != 'canceled' &&
+                      entry.value.orderStatus != 'canceled' ||
                       entry.value.orderStatus != 'received',
                 )
                 .map((entry) => _buildOrderCard(entry.key, entry.value))
