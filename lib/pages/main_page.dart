@@ -177,7 +177,11 @@ class _MainPageState extends State<MainPage> {
             children: [
               Text(
                 'Hello, $username',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  fontFamily: 'Sen',
+                ),
               ),
               Switch(
                 value: isOnline,
@@ -204,6 +208,7 @@ class _MainPageState extends State<MainPage> {
                                   val
                                       ? 'Status online diaktifkan.'
                                       : 'Status online dinonaktifkan.',
+                                  style: TextStyle(fontFamily: 'Sen'),
                                 ),
                               ),
                             );
@@ -213,7 +218,10 @@ class _MainPageState extends State<MainPage> {
                             });
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Gagal mengubah status online.'),
+                                content: Text(
+                                  'Gagal mengubah status online.',
+                                  style: TextStyle(fontFamily: 'Sen'),
+                                ),
                               ),
                             );
                           }
@@ -226,13 +234,17 @@ class _MainPageState extends State<MainPage> {
           SizedBox(height: 30),
           Text(
             'Order Requests',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              fontFamily: 'Sen',
+            ),
           ),
           SizedBox(height: 16),
           if (isLoading)
             Center(child: CircularProgressIndicator())
           else if (orders.isEmpty)
-            Text('No active orders.')
+            Text('No active orders.', style: TextStyle(fontFamily: 'Sen'))
           else
             ...orders
                 .asMap()
@@ -288,12 +300,20 @@ class _MainPageState extends State<MainPage> {
               children: [
                 Text(
                   order.customerName ?? 'Unknown Customer',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    fontFamily: 'Sen',
+                  ),
                 ),
                 SizedBox(height: 4),
                 Text(
                   'Rp${order.totalPrice ?? 0}',
-                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    fontFamily: 'Sen',
+                  ),
                 ),
               ],
             ),
@@ -350,7 +370,10 @@ class _MainPageState extends State<MainPage> {
     try {
       final message = await OrderService.acceptOrder(orderId);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.green),
+        SnackBar(
+          content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+          backgroundColor: Colors.green,
+        ),
       );
       setState(() => orderStatuses[index] = OrderStatus.accepted);
       loadOrders();
@@ -363,7 +386,10 @@ class _MainPageState extends State<MainPage> {
     try {
       final message = await OrderService.rejectOrder(orderId);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.orange),
+        SnackBar(
+          content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+          backgroundColor: Colors.orange,
+        ),
       );
       setState(() => orderStatuses[index] = OrderStatus.finished);
       loadOrders();
@@ -376,7 +402,10 @@ class _MainPageState extends State<MainPage> {
     try {
       final message = await OrderService.deliverOrder(orderId);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.green),
+        SnackBar(
+          content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+          backgroundColor: Colors.green,
+        ),
       );
       loadOrders();
     } catch (e) {
@@ -388,7 +417,10 @@ class _MainPageState extends State<MainPage> {
     try {
       final message = await OrderService.finishOrder(orderId);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.green),
+        SnackBar(
+          content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+          backgroundColor: Colors.green,
+        ),
       );
       loadOrders();
       loadPorter();
@@ -399,7 +431,10 @@ class _MainPageState extends State<MainPage> {
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+        backgroundColor: Colors.red,
+      ),
     );
   }
 
@@ -408,10 +443,21 @@ class _MainPageState extends State<MainPage> {
       children: [
         Text(
           value,
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Sen',
+          ),
         ),
         SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontFamily: 'Sen',
+          ),
+        ),
       ],
     );
   }
@@ -423,7 +469,7 @@ class _MainPageState extends State<MainPage> {
           (_) => AlertDialog(
             title: Text(
               'Order Details',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Sen'),
             ),
             content: SingleChildScrollView(
               child: Column(
@@ -448,7 +494,10 @@ class _MainPageState extends State<MainPage> {
                   Divider(thickness: 1),
                   Text(
                     'Total Payment',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Sen',
+                    ),
                   ),
                   SizedBox(height: 8),
                   _priceRow('Total Price', 'Rp${order.totalPrice}'),
@@ -464,7 +513,10 @@ class _MainPageState extends State<MainPage> {
                   Navigator.pop(context);
                   setState(() => orderStatuses[index] = OrderStatus.delivering);
                 },
-                child: Text('DELIVER', style: TextStyle(color: Colors.orange)),
+                child: Text(
+                  'DELIVER',
+                  style: TextStyle(color: Colors.orange, fontFamily: 'Sen'),
+                ),
               ),
             ],
           ),
@@ -486,14 +538,20 @@ class _MainPageState extends State<MainPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(name, style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            name,
+            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Sen'),
+          ),
           SizedBox(height: 8),
           ...items.map(
             (item) => Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('${item['name']} x${item['qty']}'),
-                Text('Rp${item['price']}'),
+                Text(
+                  '${item['name']} x${item['qty']}',
+                  style: TextStyle(fontFamily: 'Sen'),
+                ),
+                Text('Rp${item['price']}', style: TextStyle(fontFamily: 'Sen')),
               ],
             ),
           ),
@@ -501,7 +559,11 @@ class _MainPageState extends State<MainPage> {
             SizedBox(height: 6),
             Text(
               'Catatan: $note',
-              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                fontFamily: 'Sen',
+              ),
             ),
           ],
         ],
@@ -519,12 +581,14 @@ class _MainPageState extends State<MainPage> {
             label,
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontFamily: 'Sen',
             ),
           ),
           Text(
             value,
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontFamily: 'Sen',
             ),
           ),
         ],
@@ -545,7 +609,11 @@ class _MainPageState extends State<MainPage> {
         foregroundColor: textColor,
         padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        textStyle: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'Sen',
+        ),
       ),
       child: Text(text),
     );

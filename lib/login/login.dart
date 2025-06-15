@@ -90,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
 
                 const Text(
-                  'MERCHANT APP',
+                  'PORTER APP',
                   style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.bold,
