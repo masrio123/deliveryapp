@@ -500,6 +500,7 @@ class _MainPageState extends State<MainPage> {
                     ),
                   ),
                   SizedBox(height: 8),
+                  _priceRow('Lokasi', order.tenantLocationName),
                   _priceRow('Total Price', 'Rp${order.totalPrice}'),
                   _priceRow('Delivery Fee', 'Rp${order.shippingCost}'),
                   _priceRow('TOTAL', 'Rp${order.grandTotal}', isBold: true),
