@@ -6,6 +6,8 @@ import '../models/order.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/profile_service.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:petraporter_deliveryapp/login/login.dart';
 
 void main() => runApp(MyApp());
 
@@ -38,7 +40,7 @@ class _MainPageState extends State<MainPage> {
   bool isLoading = true;
   bool _isToggling = false;
   bool isOnline = false;
-  int currentIndex = 1;
+  int currentIndex = 0;
   String username = "";
 
   int orderCount = 0;
@@ -111,6 +113,18 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
+  void _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    if (!mounted) return; // Pastikan widget masih hidup
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -145,6 +159,19 @@ class _MainPageState extends State<MainPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 10, right: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.black),
+                  onPressed: _logout,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
