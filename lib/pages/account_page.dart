@@ -3,6 +3,8 @@ import '../services/profile_service.dart';
 import '../models/profile.dart';
 
 class AccountPage extends StatefulWidget {
+  const AccountPage({super.key});
+
   @override
   _AccountPageState createState() => _AccountPageState();
 }
@@ -21,21 +23,35 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   Future<void> _loadProfile() async {
+    // Pastikan widget masih ada sebelum memulai async operation
+    if (!mounted) return;
+
+    // Set loading state
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final profile = await PorterService.fetchPorterProfile();
-      setState(() {
-        _profile = profile;
-        _rekeningController.text = profile.accountNumber;
-        _isLoading = false;
-      });
+      // Periksa lagi setelah async operation selesai
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _rekeningController.text = profile.accountNumber;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       print('Gagal load profile: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memuat profil')));
-      setState(() {
-        _isLoading = false;
-      });
+      // Periksa lagi sebelum menampilkan SnackBar atau mengubah state
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Gagal memuat profil')));
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -44,12 +60,24 @@ class _AccountPageState extends State<AccountPage> {
       final rekening = _rekeningController.text.trim();
       if (rekening.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Nomor rekening tidak boleh kosong')),
+          const SnackBar(content: Text('Nomor rekening tidak boleh kosong')),
         );
         return;
       }
 
-      // Simpan ke server (opsional)
+      // TODO: Implement logic to save the new account number to the server
+      // final success = await PorterService.updateAccountNumber(rekening);
+      // if (success) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     SnackBar(content: Text('Nomor rekening berhasil disimpan')),
+      //   );
+      // } else {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     SnackBar(content: Text('Gagal menyimpan nomor rekening')),
+      //   );
+      // }
+
+      // For now, just show a confirmation message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Nomor rekening berhasil disimpan: $rekening')),
       );
@@ -101,9 +129,7 @@ class _AccountPageState extends State<AccountPage> {
                       children: [
                         const CircleAvatar(
                           radius: 30,
-                          backgroundImage: NetworkImage(
-                            'https://i.pravatar.cc/150?img=18',
-                          ),
+                          backgroundImage: AssetImage('assets/avatar.png'),
                         ),
                         const SizedBox(width: 16),
                         Column(
@@ -134,7 +160,6 @@ class _AccountPageState extends State<AccountPage> {
                     const Divider(),
                     _ProfileItem(label: 'Jurusan', value: _profile!.department),
                     _ProfileItem(label: 'NRP', value: _profile!.porterNrp),
-                    _RatingItem(),
 
                     // Rekening
                     Padding(
@@ -250,13 +275,16 @@ class _ProfileItem extends StatelessWidget {
 }
 
 class _RatingItem extends StatelessWidget {
+  final double rating;
+  const _RatingItem({this.rating = 5.0});
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const ListTile(
+        ListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(
+          title: const Text(
             'Rating',
             style: TextStyle(
               fontSize: 14,
@@ -266,11 +294,11 @@ class _RatingItem extends StatelessWidget {
           ),
           subtitle: Row(
             children: [
-              Icon(Icons.star, color: Colors.orange, size: 18),
-              SizedBox(width: 4),
+              const Icon(Icons.star, color: Colors.orange, size: 18),
+              const SizedBox(width: 4),
               Text(
-                '5.0',
-                style: TextStyle(
+                rating.toStringAsFixed(1), // Display actual rating
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Sen',

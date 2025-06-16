@@ -1,17 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:petraporter_deliveryapp/pages/account_page.dart';
-import 'activity_page.dart';
-import '../services/order_service.dart';
-import '../models/order.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../services/profile_service.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// Sesuaikan path import dengan struktur folder Anda
+import 'package:petraporter_deliveryapp/pages/account_page.dart';
+import 'package:petraporter_deliveryapp/pages/activity_page.dart';
+import 'package:petraporter_deliveryapp/services/order_service.dart';
+import 'package:petraporter_deliveryapp/models/order.dart';
+import 'package:petraporter_deliveryapp/services/profile_service.dart';
 import 'package:petraporter_deliveryapp/login/login.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -22,7 +27,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
       ),
-      home: MainPage(),
+      home: const MainPage(),
     );
   }
 }
@@ -30,6 +35,8 @@ class MyApp extends StatelessWidget {
 enum OrderStatus { none, accepted, delivering, finished }
 
 class MainPage extends StatefulWidget {
+  const MainPage({super.key});
+
   @override
   State<MainPage> createState() => _MainPageState();
 }
@@ -46,6 +53,15 @@ class _MainPageState extends State<MainPage> {
   int orderCount = 0;
   int incomeCount = 0;
 
+  Timer? _timer;
+
+  // Formatter untuk mata uang Rupiah
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -56,69 +72,80 @@ class _MainPageState extends State<MainPage> {
     startInterval();
   }
 
-  Timer? _timer;
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   void startInterval() {
-    _timer = Timer.periodic(Duration(seconds: 10), (timer) {
-      print("order di reload");
-      loadOrders();
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (currentIndex == 0 && mounted) {
+        print("Memuat ulang daftar order...");
+        loadOrders();
+      }
     });
   }
 
   Future<void> loadOrders() async {
     try {
-      isLoading = true;
       final result = await OrderService.fetchActiveOrder();
-      setState(() {
-        orders = result;
-        orderStatuses = List.generate(result.length, (_) => OrderStatus.none);
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          orders = result;
+          orderStatuses = List.generate(result.length, (_) => OrderStatus.none);
+          isLoading = false;
+        });
+      }
     } catch (e) {
       print('Error fetching orders: $e');
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   Future<void> loadPorter() async {
     try {
       final result = await OrderService.fetchWorkSummary();
-      setState(() {
-        orderCount = result.total_orders_handled;
-        incomeCount = result.total_income;
-      });
+      if (mounted) {
+        setState(() {
+          orderCount = result.total_orders_handled;
+          incomeCount = result.total_income;
+        });
+      }
     } catch (e) {
-      print('Error fetching orders: $e');
-      setState(() => isLoading = false);
+      print('Error fetching porter summary: $e');
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   Future<void> loadStatusPorter() async {
     try {
       final result = await PorterService.getPorterOnlineStatus();
-      setState(() {
-        isOnline = result.porterIsOnline;
-      });
+      if (mounted) {
+        setState(() {
+          isOnline = result.porterIsOnline;
+        });
+      }
     } catch (e) {
-      print('Error fetching orders: $e');
-      setState(() => isLoading = false);
+      print('Error fetching porter status: $e');
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   void checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_name') ?? 'lorem';
-    setState(() {
-      username = name;
-    });
+    if (mounted) {
+      setState(() {
+        username = name;
+      });
+    }
   }
 
   void _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-
-    if (!mounted) return; // Pastikan widget masih hidup
-
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginPage()),
       (route) => false,
@@ -128,33 +155,17 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) => setState(() => currentIndex = index),
-        selectedItemColor: Color(0xFFFF7622),
-        unselectedItemColor: Colors.grey[600],
-        selectedLabelStyle: TextStyle(fontFamily: 'Sen'),
-        unselectedLabelStyle: TextStyle(fontFamily: 'Sen'),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_shipping),
-            label: 'Order',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.article), label: 'Activity'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-        ],
-      ),
       body: SafeArea(
         child: IndexedStack(
           index: currentIndex,
-          children: [_buildOrderPage(), ActivityPage(), AccountPage()],
+          children: [_buildOrderPage(), ActivityPage(), const AccountPage()],
         ),
       ),
     );
   }
 
   Widget _buildOrderPage() {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,9 +188,9 @@ class _MainPageState extends State<MainPage> {
             children: [
               Text(
                 'Hello, $username',
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: 18,
+                  fontSize: 25,
                   fontFamily: 'Sen',
                 ),
               ),
@@ -188,154 +199,170 @@ class _MainPageState extends State<MainPage> {
                 activeColor: Colors.green,
                 onChanged:
                     _isToggling
-                        ? null // Disable sementara jika sedang update
+                        ? null
                         : (val) async {
-                          setState(() {
-                            _isToggling = true;
-                          });
-
+                          setState(() => _isToggling = true);
                           final success =
                               await PorterService.updatePorterOnlineStatus(val);
-
+                          if (!mounted) return;
                           if (success) {
-                            setState(() {
-                              isOnline = val;
-                              _isToggling = false;
-                            });
+                            setState(() => isOnline = val);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
                                   val
                                       ? 'Status online diaktifkan.'
                                       : 'Status online dinonaktifkan.',
-                                  style: TextStyle(fontFamily: 'Sen'),
                                 ),
                               ),
                             );
                           } else {
-                            setState(() {
-                              _isToggling = false;
-                            });
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text(
-                                  'Gagal mengubah status online.',
-                                  style: TextStyle(fontFamily: 'Sen'),
-                                ),
+                                content: Text('Gagal mengubah status online.'),
                               ),
                             );
                           }
+                          setState(() => _isToggling = false);
                         },
               ),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           _buildSummary(),
-          SizedBox(height: 30),
-          Text(
-            'Order Requests',
+          const SizedBox(height: 24),
+          const Text(
+            'Active Orders',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 17,
               fontFamily: 'Sen',
             ),
           ),
-          SizedBox(height: 16),
-          if (isLoading)
-            Center(child: CircularProgressIndicator())
-          else if (orders.isEmpty)
-            Text('No active orders.', style: TextStyle(fontFamily: 'Sen'))
-          else
-            ...orders
-                .asMap()
-                .entries
-                .where(
-                  (entry) =>
-                      entry.value.orderStatus != 'canceled' ||
-                      entry.value.orderStatus != 'received',
-                )
-                .map((entry) => _buildOrderCard(entry.key, entry.value))
-                .toList(),
+          const SizedBox(height: 16),
+          Expanded(child: _buildOrderList()),
         ],
       ),
     );
   }
 
+  Widget _buildOrderList() {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (orders.isEmpty) {
+      return const Center(
+        child: Text('No active orders.', style: TextStyle(fontFamily: 'Sen')),
+      );
+    }
+
+    final filteredOrders =
+        orders
+            .where(
+              (order) =>
+                  order.orderStatus != 'canceled' &&
+                  order.orderStatus != 'finished',
+            )
+            .toList();
+
+    if (filteredOrders.isEmpty) {
+      return const Center(
+        child: Text(
+          'No new order requests.',
+          style: TextStyle(fontFamily: 'Sen'),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: filteredOrders.length,
+      itemBuilder: (context, index) {
+        final order = filteredOrders[index];
+        return _buildOrderCard(index, order);
+      },
+    );
+  }
+
   Widget _buildSummary() {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _summaryBox(orderCount.toString(), 'ORDERS'),
-          Container(width: 1, height: 40, color: Colors.grey.shade400),
-          _summaryBox(incomeCount.toString(), 'TOTAL INCOME'),
-        ],
+    return Card(
+      elevation: 4,
+      color: const Color.fromARGB(209, 255, 94, 0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _summaryBox(orderCount.toString(), 'ORDERS'),
+            Container(
+              width: 1,
+              height: 40,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+            _summaryBox(currencyFormatter.format(incomeCount), 'TOTAL INCOME'),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildOrderCard(int index, Order order) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      margin: EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundImage: NetworkImage('https://i.pravatar.cc/100'),
-            radius: 26,
-          ),
-          SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  order.customerName ?? 'Unknown Customer',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    fontFamily: 'Sen',
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Rp${order.totalPrice ?? 0}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                    fontFamily: 'Sen',
-                  ),
-                ),
-              ],
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 26,
+              backgroundImage: AssetImage('assets/avatar.png'),
             ),
-          ),
-          ..._buildOrderActions(order, index),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    order.customerName ?? 'Unknown Customer',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      fontFamily: 'Sen',
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    currencyFormatter.format(order.totalPrice ?? 0),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      fontFamily: 'Sen',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ..._buildOrderActions(order, index),
+          ],
+        ),
       ),
     );
   }
 
   List<Widget> _buildOrderActions(Order order, int index) {
-    print("order status item => " + order.orderStatus);
-    switch (order.orderStatus) {
+    final status = order.orderStatus ?? 'unknown';
+    switch (status) {
       case 'waiting':
         return [
           _roundedButton(
             'Accept',
-            Color(0xFFFF7622),
+            const Color(0xFFFF7622),
             Colors.white,
             () => _handleAccept(order.orderId, index),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           _roundedButton(
             'Decline',
             Colors.red,
@@ -347,7 +374,7 @@ class _MainPageState extends State<MainPage> {
         return [
           _roundedButton(
             'Details',
-            Colors.orange,
+            const Color(0xFFFF7622),
             Colors.white,
             () => _showOrderDetailsDialog(index, order),
           ),
@@ -355,84 +382,118 @@ class _MainPageState extends State<MainPage> {
       case 'on-delivery':
         return [
           _roundedButton(
-            'Finish Order',
+            'Finish',
             Colors.green,
             Colors.white,
             () => _handleFinish(order.orderId),
           ),
         ];
       default:
-        return [];
+        return [const SizedBox.shrink()];
     }
+  }
+
+  void _handleError(dynamic e, String defaultMessage) {
+    String errorMessage = defaultMessage;
+    String errorString = e.toString();
+    if (errorString.contains('{') && errorString.contains('}')) {
+      final jsonStartIndex = errorString.indexOf('{');
+      try {
+        final jsonString = errorString.substring(jsonStartIndex);
+        final jsonResponse = json.decode(jsonString);
+        if (jsonResponse['message'] != null) {
+          errorMessage = jsonResponse['message'];
+        }
+      } catch (jsonError) {
+        print("Failed to parse error JSON: $jsonError");
+        errorMessage = 'An unexpected error occurred.';
+      }
+    }
+    _showErrorSnackBar(errorMessage);
   }
 
   Future<void> _handleAccept(int orderId, int index) async {
     try {
       final message = await OrderService.acceptOrder(orderId);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+          content: Text(
+            message ?? 'Order accepted successfully.',
+            style: const TextStyle(fontFamily: 'Sen'),
+          ),
           backgroundColor: Colors.green,
         ),
       );
-      setState(() => orderStatuses[index] = OrderStatus.accepted);
       loadOrders();
     } catch (e) {
-      _showErrorSnackBar('Error accepting order: $e');
+      _handleError(e, 'Failed to accept order.');
     }
   }
 
   Future<void> _handleDecline(int orderId, int index) async {
     try {
       final message = await OrderService.rejectOrder(orderId);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+          content: Text(
+            message ?? 'Order declined.',
+            style: const TextStyle(fontFamily: 'Sen'),
+          ),
           backgroundColor: Colors.orange,
         ),
       );
-      setState(() => orderStatuses[index] = OrderStatus.finished);
       loadOrders();
     } catch (e) {
-      _showErrorSnackBar('Error declining order: $e');
+      _handleError(e, 'Failed to decline order.');
     }
   }
 
   Future<void> _handleDeliver(int orderId) async {
     try {
       final message = await OrderService.deliverOrder(orderId);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+          content: Text(
+            message ?? 'Order is now out for delivery.',
+            style: const TextStyle(fontFamily: 'Sen'),
+          ),
           backgroundColor: Colors.green,
         ),
       );
       loadOrders();
     } catch (e) {
-      _showErrorSnackBar('Error deliver: $e');
+      _handleError(e, 'Failed to start delivery.');
     }
   }
 
   Future<void> _handleFinish(int orderId) async {
     try {
       final message = await OrderService.finishOrder(orderId);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+          content: Text(
+            message ?? 'Order finished successfully.',
+            style: const TextStyle(fontFamily: 'Sen'),
+          ),
           backgroundColor: Colors.green,
         ),
       );
       loadOrders();
       loadPorter();
     } catch (e) {
-      _showErrorSnackBar('Error deliver: $e');
+      _handleError(e, 'Failed to finish order.');
     }
   }
 
   void _showErrorSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: TextStyle(fontFamily: 'Sen')),
+        content: Text(message, style: const TextStyle(fontFamily: 'Sen')),
         backgroundColor: Colors.red,
       ),
     );
@@ -443,18 +504,19 @@ class _MainPageState extends State<MainPage> {
       children: [
         Text(
           value,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             fontFamily: 'Sen',
+            color: Colors.white,
           ),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[600],
+            color: Colors.grey[300],
             fontFamily: 'Sen',
           ),
         ),
@@ -466,61 +528,155 @@ class _MainPageState extends State<MainPage> {
     showDialog(
       context: context,
       builder:
-          (_) => AlertDialog(
-            title: Text(
-              'Order Details',
-              style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Sen'),
+          (_) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ...order.items.map(
-                    (item) => _restaurantCard(
-                      name: item.tenantName,
-                      items:
-                          item.items
-                              .map(
-                                (p) => {
-                                  'name': p.productName,
-                                  'qty': p.quantity,
-                                  'price': p.price,
-                                },
-                              )
-                              .toList(),
+            insetPadding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Order Details",
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  SizedBox(height: 16),
-                  Divider(thickness: 1),
-                  Text(
-                    'Total Payment',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Sen',
+                    Text(
+                      "Order ID: #${order.orderId}",
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                     ),
-                  ),
-                  SizedBox(height: 8),
-                  _priceRow('Lokasi', order.tenantLocationName),
-                  _priceRow('Total Price', 'Rp${order.totalPrice}'),
-                  _priceRow('Delivery Fee', 'Rp${order.shippingCost}'),
-                  _priceRow('TOTAL', 'Rp${order.grandTotal}', isBold: true),
-                ],
+                    const Divider(height: 32, thickness: 1),
+                    _buildInfoRow(
+                      Icons.person_outline,
+                      "CUSTOMER",
+                      order.customerName ?? 'N/A',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInfoRow(
+                      Icons.location_on_outlined,
+                      "DELIVER TO",
+                      order.tenantLocationName ?? 'N/A',
+                    ),
+                    const Divider(height: 32, thickness: 1),
+                    Text(
+                      "Items to Pick Up",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children:
+                              order.items.map((item) {
+                                return _restaurantCard(
+                                  name: item.tenantName ?? 'Unknown Tenant',
+                                  items:
+                                      item.items
+                                          .map(
+                                            (p) => {
+                                              'name':
+                                                  p.productName ??
+                                                  'Unknown Item',
+                                              'qty': p.quantity ?? 1,
+                                              'price': p.price ?? 0,
+                                            },
+                                          )
+                                          .toList(),
+                                );
+                              }).toList(),
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 32, thickness: 1),
+                    _priceRow(
+                      'Total Price',
+                      currencyFormatter.format(order.totalPrice ?? 0),
+                    ),
+                    const SizedBox(height: 4),
+                    _priceRow(
+                      'Delivery Fee',
+                      currencyFormatter.format(order.shippingCost ?? 0),
+                    ),
+                    const SizedBox(height: 8),
+                    _priceRow(
+                      'TOTAL',
+                      currencyFormatter.format(order.grandTotal ?? 0),
+                      isBold: true,
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF7622),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(
+                            fontFamily: 'Sen',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _handleDeliver(order.orderId);
+                        },
+                        child: const Text("START DELIVERY"),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  _handleDeliver(order.orderId);
-                  Navigator.pop(context);
-                  setState(() => orderStatuses[index] = OrderStatus.delivering);
-                },
-                child: Text(
-                  'DELIVER',
-                  style: TextStyle(color: Colors.orange, fontFamily: 'Sen'),
+          ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.grey.shade700, size: 20),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
                 ),
               ),
             ],
           ),
+        ),
+      ],
     );
   }
 
@@ -530,10 +686,10 @@ class _MainPageState extends State<MainPage> {
     String? note,
   }) {
     return Container(
-      padding: EdgeInsets.all(12),
-      margin: EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
+        color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -541,26 +697,35 @@ class _MainPageState extends State<MainPage> {
         children: [
           Text(
             name,
-            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Sen'),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Sen',
+            ),
           ),
-          SizedBox(height: 8),
+          const Divider(height: 16),
           ...items.map(
-            (item) => Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${item['name']} x${item['qty']}',
-                  style: TextStyle(fontFamily: 'Sen'),
-                ),
-                Text('Rp${item['price']}', style: TextStyle(fontFamily: 'Sen')),
-              ],
+            (item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${item['name'] ?? 'Item'} x${item['qty'] ?? 1}',
+                    style: const TextStyle(fontFamily: 'Sen'),
+                  ),
+                  Text(
+                    currencyFormatter.format(item['price'] ?? 0),
+                    style: const TextStyle(fontFamily: 'Sen'),
+                  ),
+                ],
+              ),
             ),
           ),
           if (note != null) ...[
-            SizedBox(height: 6),
+            const SizedBox(height: 6),
             Text(
               'Catatan: $note',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 fontStyle: FontStyle.italic,
                 fontFamily: 'Sen',
@@ -583,12 +748,15 @@ class _MainPageState extends State<MainPage> {
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
               fontFamily: 'Sen',
+              fontSize: isBold ? 16 : 14,
+              color: isBold ? Colors.black : Colors.grey.shade700,
             ),
           ),
           Text(
             value,
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 16 : 14,
               fontFamily: 'Sen',
             ),
           ),
@@ -608,9 +776,9 @@ class _MainPageState extends State<MainPage> {
       style: ElevatedButton.styleFrom(
         backgroundColor: bgColor,
         foregroundColor: textColor,
-        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: TextStyle(
+        textStyle: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           fontFamily: 'Sen',
