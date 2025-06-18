@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import '../services/profile_service.dart';
 import '../models/profile.dart';
 
+// --- PERUBAHAN --- Menyamakan konstanta warna dengan halaman Customer
+const Color _primaryColor = Color(0xFFFF7622);
+const Color _backgroundColor = Color(0xFFFFFFFF);
+const Color _textColor = Color(0xFF333333);
+const Color _subtleTextColor = Colors.grey;
+
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
 
@@ -23,17 +29,13 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   Future<void> _loadProfile() async {
-    // Pastikan widget masih ada sebelum memulai async operation
     if (!mounted) return;
-
-    // Set loading state
     setState(() {
       _isLoading = true;
     });
 
     try {
       final profile = await PorterService.fetchPorterProfile();
-      // Periksa lagi setelah async operation selesai
       if (mounted) {
         setState(() {
           _profile = profile;
@@ -43,11 +45,18 @@ class _AccountPageState extends State<AccountPage> {
       }
     } catch (e) {
       print('Gagal load profile: $e');
-      // Periksa lagi sebelum menampilkan SnackBar atau mengubah state
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Gagal memuat profil')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Gagal memuat profil.'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
         setState(() {
           _isLoading = false;
         });
@@ -65,21 +74,21 @@ class _AccountPageState extends State<AccountPage> {
         return;
       }
 
-      // TODO: Implement logic to save the new account number to the server
-      // final success = await PorterService.updateAccountNumber(rekening);
-      // if (success) {
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     SnackBar(content: Text('Nomor rekening berhasil disimpan')),
-      //   );
-      // } else {
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     SnackBar(content: Text('Gagal menyimpan nomor rekening')),
-      //   );
+      // if (mounted && _profile != null) {
+      //     setState(() {
+      //         _profile!.accountNumber = rekening;
+      //     });
       // }
-
-      // For now, just show a confirmation message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Nomor rekening berhasil disimpan: $rekening')),
+        SnackBar(
+          content: Text('Nomor rekening berhasil disimpan: $rekening'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
       );
     }
 
@@ -96,219 +105,232 @@ class _AccountPageState extends State<AccountPage> {
 
   @override
   Widget build(BuildContext context) {
-    const buttonColor = Color(0xFFFF7622);
-    const buttonTextStyle = TextStyle(
-      fontFamily: 'Sen',
-      fontWeight: FontWeight.bold,
-      fontSize: 16,
-      color: Colors.white,
-    );
-
+    // --- PERUBAHAN --- Mengadopsi struktur Scaffold dari halaman Customer
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(30, 22, 30, 0),
-        child:
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _profile == null
-                ? const Center(child: Text('Profil tidak tersedia'))
-                : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'My Profile',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Sen',
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      children: [
-                        const CircleAvatar(
-                          radius: 30,
-                          backgroundImage: AssetImage('assets/avatar.png'),
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _profile!.porterName,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Sen',
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Porter',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                                fontFamily: 'Sen',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    const Divider(),
-                    _ProfileItem(label: 'Jurusan', value: _profile!.department),
-                    _ProfileItem(label: 'NRP', value: _profile!.porterNrp),
-
-                    // Rekening
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Nomor Rekening',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                    fontFamily: 'Sen',
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                _isEditing
-                                    ? TextField(
-                                      controller: _rekeningController,
-                                      keyboardType: TextInputType.number,
-                                      decoration: const InputDecoration(
-                                        isDense: true,
-                                        contentPadding: EdgeInsets.symmetric(
-                                          vertical: 8,
-                                          horizontal: 12,
-                                        ),
-                                        border: OutlineInputBorder(),
-                                      ),
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Sen',
-                                      ),
-                                    )
-                                    : Text(
-                                      _rekeningController.text,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Sen',
-                                      ),
-                                    ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: _toggleEditSave,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: buttonColor,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              _isEditing ? 'Save' : 'Edit',
-                              style: buttonTextStyle,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(),
-                  ],
-                ),
+      backgroundColor: _backgroundColor,
+      appBar: AppBar(
+        title: const Text(
+          "My Profile",
+          style: TextStyle(
+            color: _textColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
+        backgroundColor: _backgroundColor,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadProfile,
+        color: _primaryColor,
+        child: _buildBody(),
       ),
     );
   }
-}
 
-class _ProfileItem extends StatelessWidget {
-  final String label;
-  final String value;
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: _primaryColor),
+      );
+    }
 
-  const _ProfileItem({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black,
-              fontFamily: 'Sen',
-            ),
-          ),
-          subtitle: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Sen',
-            ),
-          ),
-        ),
-        const Divider(),
-      ],
-    );
-  }
-}
-
-class _RatingItem extends StatelessWidget {
-  final double rating;
-  const _RatingItem({this.rating = 5.0});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text(
-            'Rating',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black,
-              fontFamily: 'Sen',
-            ),
-          ),
-          subtitle: Row(
+    if (_profile == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.star, color: Colors.orange, size: 18),
-              const SizedBox(width: 4),
-              Text(
-                rating.toStringAsFixed(1), // Display actual rating
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Sen',
+              Icon(Icons.wifi_off_rounded, color: Colors.grey[400], size: 60),
+              const SizedBox(height: 16),
+              const Text(
+                "Gagal memuat data profile.\nSilakan periksa koneksi Anda.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: _subtleTextColor),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                 ),
+                onPressed: _loadProfile,
+                icon: const Icon(Icons.refresh),
+                label: const Text("Coba Lagi"),
               ),
             ],
           ),
         ),
-        const Divider(),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+      child: Column(
+        children: [
+          _buildProfileHeader(),
+          const SizedBox(height: 32),
+          _buildInfoDetails(),
+        ],
+      ),
+    );
+  }
+
+  // --- PERUBAHAN --- Widget disesuaikan untuk data Porter
+  Widget _buildProfileHeader() {
+    return Column(
+      children: [
+        const CircleAvatar(
+          radius: 50,
+          backgroundImage: AssetImage('assets/avatar.png'),
+          backgroundColor: Colors.black12,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          _profile!.porterName,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: _textColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        // Menampilkan NRP di bawah nama, mirip identityNumber di Customer
+        Text(
+          _profile!.porterNrp,
+          style: const TextStyle(fontSize: 16, color: _subtleTextColor),
+        ),
       ],
+    );
+  }
+
+  // --- PERUBAHAN --- Widget disesuaikan untuk data Porter dan fungsi edit
+  Widget _buildInfoDetails() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Info Jurusan
+          _buildInfoRow(
+            label: "Jurusan",
+            value: _profile!.department,
+            icon: Icons.school_outlined,
+          ),
+          const Divider(height: 1),
+          // Info Nomor Rekening yang dapat diedit
+          _buildEditableRekeningRow(),
+        ],
+      ),
+    );
+  }
+
+  // Widget untuk baris info statis (Jurusan)
+  Widget _buildInfoRow({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Row(
+        children: [
+          Icon(icon, color: _primaryColor, size: 24),
+          const SizedBox(width: 16),
+          Text(label, style: const TextStyle(fontSize: 16, color: _textColor)),
+          const Spacer(),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: _subtleTextColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget khusus untuk baris Nomor Rekening yang bisa diedit
+  Widget _buildEditableRekeningRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.account_balance_wallet_outlined,
+            color: _primaryColor,
+            size: 24,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child:
+                _isEditing
+                    ? TextField(
+                      controller: _rekeningController,
+                      keyboardType: TextInputType.number,
+                      autofocus: true,
+                      decoration: const InputDecoration.collapsed(
+                        hintText: 'Masukkan nomor rekening',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: _textColor,
+                      ),
+                    )
+                    : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Nomor Rekening",
+                          style: TextStyle(fontSize: 16, color: _textColor),
+                        ),
+                        Text(
+                          _rekeningController.text,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: _subtleTextColor,
+                          ),
+                        ),
+                      ],
+                    ),
+          ),
+          TextButton(
+            onPressed: _toggleEditSave,
+            child: Text(
+              _isEditing ? 'Save' : 'Edit',
+              style: const TextStyle(
+                color: _primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

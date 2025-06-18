@@ -87,9 +87,8 @@ class _LoginPageState extends State<LoginPage> {
                             children: [
                               // Ganti dengan path logo Anda jika berbeda
                               Image.asset('assets/logo.png', height: 280),
-                              const SizedBox(height: 15),
+                              const SizedBox(height: 45),
 
-                              const SizedBox(height: 5),
                               // --- PERMINTAAN ANDA: Menambahkan teks "PORTER APP" ---
                               const Text(
                                 'PORTER APP',

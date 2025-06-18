@@ -57,8 +57,18 @@ class _AppShellState extends State<AppShell> {
         type: BottomNavigationBarType.fixed, // Agar semua label terlihat.
         // --- PERBAIKAN DI SINI ---
         // Mengatur font untuk label navigasi
-        selectedLabelStyle: const TextStyle(fontFamily: 'Sen'),
-        unselectedLabelStyle: const TextStyle(fontFamily: 'Sen'),
+        // --- PERUBAHAN DI SINI ---
+        // Menambah ukuran ikon dan font agar navbar terlihat lebih besar.
+        iconSize: 35, // Ukuran ikon diperbesar (default: 24)
+        selectedFontSize: 15, // Ukuran font label yang aktif (default: 14)
+        unselectedFontSize:
+            13, // Ukuran font label yang tidak aktif (default: 12)
+        // Menambah sedikit padding di bawah ikon
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          height: 1.5,
+        ),
+        unselectedLabelStyle: const TextStyle(height: 1.5),
       ),
     );
   }

@@ -12,6 +12,14 @@ import 'package:petraporter_deliveryapp/models/order.dart';
 import 'package:petraporter_deliveryapp/services/profile_service.dart';
 import 'package:petraporter_deliveryapp/login/login.dart';
 
+// --- STYLING CONSTANTS ---
+const primaryColor = Color(0xFFFF7622);
+const secondaryColor = Color(0xFFFFC529);
+const backgroundColor = Color(0xFFF8F9FA);
+const textColor = Color(0xFF333333);
+const greenColor = Color(0xFF28A745);
+const redColor = Color(0xFFDC3545);
+
 void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
@@ -24,15 +32,30 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: 'Sen',
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: backgroundColor,
         useMaterial3: true,
+        primaryColor: primaryColor,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primaryColor,
+          background: backgroundColor,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: backgroundColor,
+          elevation: 0,
+          iconTheme: IconThemeData(color: textColor),
+        ),
+        cardTheme: CardTheme(
+          elevation: 2,
+          shadowColor: Colors.black.withOpacity(0.05),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
       ),
       home: const MainPage(),
     );
   }
 }
-
-enum OrderStatus { none, accepted, delivering, finished }
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -43,19 +66,17 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   List<Order> orders = [];
-  List<OrderStatus> orderStatuses = [];
   bool isLoading = true;
   bool _isToggling = false;
   bool isOnline = false;
   int currentIndex = 0;
-  String username = "";
+  String username = "Porter";
 
   int orderCount = 0;
   int incomeCount = 0;
 
   Timer? _timer;
 
-  // Formatter untuk mata uang Rupiah
   final currencyFormatter = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp ',
@@ -65,11 +86,19 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-    checkLoginStatus();
-    loadStatusPorter();
-    loadOrders();
-    loadPorter();
+    _fetchAllData();
     startInterval();
+  }
+
+  Future<void> _fetchAllData() async {
+    setState(() => isLoading = true);
+    await Future.wait([
+      checkLoginStatus(),
+      loadStatusPorter(),
+      loadOrders(),
+      loadPorter(),
+    ]);
+    if (mounted) setState(() => isLoading = false);
   }
 
   @override
@@ -80,9 +109,9 @@ class _MainPageState extends State<MainPage> {
 
   void startInterval() {
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      if (currentIndex == 0 && mounted) {
-        print("Memuat ulang daftar order...");
+      if (currentIndex == 0 && mounted && !isLoading) {
         loadOrders();
+        loadPorter();
       }
     });
   }
@@ -91,15 +120,10 @@ class _MainPageState extends State<MainPage> {
     try {
       final result = await OrderService.fetchActiveOrder();
       if (mounted) {
-        setState(() {
-          orders = result;
-          orderStatuses = List.generate(result.length, (_) => OrderStatus.none);
-          isLoading = false;
-        });
+        setState(() => orders = result);
       }
     } catch (e) {
       print('Error fetching orders: $e');
-      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -114,32 +138,22 @@ class _MainPageState extends State<MainPage> {
       }
     } catch (e) {
       print('Error fetching porter summary: $e');
-      if (mounted) setState(() => isLoading = false);
     }
   }
 
   Future<void> loadStatusPorter() async {
     try {
       final result = await PorterService.getPorterOnlineStatus();
-      if (mounted) {
-        setState(() {
-          isOnline = result.porterIsOnline;
-        });
-      }
+      if (mounted) setState(() => isOnline = result.porterIsOnline);
     } catch (e) {
       print('Error fetching porter status: $e');
-      if (mounted) setState(() => isLoading = false);
     }
   }
 
-  void checkLoginStatus() async {
+  Future<void> checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final name = prefs.getString('user_name') ?? 'lorem';
-    if (mounted) {
-      setState(() {
-        username = name;
-      });
-    }
+    final name = prefs.getString('user_name') ?? 'Porter';
+    if (mounted) setState(() => username = name);
   }
 
   void _logout() async {
@@ -152,107 +166,150 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  void _showStyledSnackBar(
+    String message, {
+    bool isError = false,
+    bool isSuccess = false,
+  }) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontFamily: 'Sen', color: Colors.white),
+        ),
+        backgroundColor:
+            isError ? redColor : (isSuccess ? greenColor : primaryColor),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Kembali ke struktur awal tanpa BottomNavigationBar
     return Scaffold(
       body: SafeArea(
-        child: IndexedStack(
-          index: currentIndex,
-          children: [_buildOrderPage(), ActivityPage(), const AccountPage()],
-        ),
+        child: _buildOrderPage(), // Langsung menampilkan halaman order
       ),
     );
   }
 
   Widget _buildOrderPage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return RefreshIndicator(
+      onRefresh: _fetchAllData,
+      color: primaryColor,
+      child: ListView(
+        // Menggunakan ListView agar bisa scroll
+        padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 10, right: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.logout, color: Colors.black),
-                  onPressed: _logout,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Hello, $username',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 25,
-                  fontFamily: 'Sen',
-                ),
-              ),
-              Switch(
-                value: isOnline,
-                activeColor: Colors.green,
-                onChanged:
-                    _isToggling
-                        ? null
-                        : (val) async {
-                          setState(() => _isToggling = true);
-                          final success =
-                              await PorterService.updatePorterOnlineStatus(val);
-                          if (!mounted) return;
-                          if (success) {
-                            setState(() => isOnline = val);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  val
-                                      ? 'Status online diaktifkan.'
-                                      : 'Status online dinonaktifkan.',
-                                ),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Gagal mengubah status online.'),
-                              ),
-                            );
-                          }
-                          setState(() => _isToggling = false);
-                        },
-              ),
-            ],
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildHeader(),
           ),
           const SizedBox(height: 20),
-          _buildSummary(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildSummary(),
+          ),
           const SizedBox(height: 24),
-          const Text(
-            'Active Orders',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
-              fontFamily: 'Sen',
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Active Orders',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                fontFamily: 'Sen',
+              ),
             ),
           ),
           const SizedBox(height: 16),
-          Expanded(child: _buildOrderList()),
+          _buildOrderList(), // Widget ini akan menangani paddingnya sendiri
         ],
       ),
     );
   }
 
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment:
+          CrossAxisAlignment.center, // Memastikan alignment vertikal
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Hello, $username',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                color: textColor,
+                fontFamily: 'Sen',
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              isOnline ? 'You are online' : 'You are offline',
+              style: TextStyle(
+                fontSize: 14,
+                color: isOnline ? greenColor : Colors.grey[600],
+                fontFamily: 'Sen',
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            Switch(
+              value: isOnline,
+              activeColor: greenColor,
+              onChanged:
+                  _isToggling
+                      ? null
+                      : (val) async {
+                        setState(() => _isToggling = true);
+                        final success =
+                            await PorterService.updatePorterOnlineStatus(val);
+                        if (!mounted) return;
+                        if (success) {
+                          setState(() => isOnline = val);
+                          _showStyledSnackBar(
+                            val
+                                ? 'Status online diaktifkan.'
+                                : 'Status online dinonaktifkan.',
+                            isSuccess: val,
+                          );
+                        } else {
+                          _showStyledSnackBar(
+                            'Gagal mengubah status online.',
+                            isError: true,
+                          );
+                        }
+                        setState(() => _isToggling = false);
+                      },
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout_outlined, color: textColor),
+              onPressed: _logout,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildOrderList() {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (orders.isEmpty) {
       return const Center(
-        child: Text('No active orders.', style: TextStyle(fontFamily: 'Sen')),
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(color: primaryColor),
+        ),
       );
     }
 
@@ -266,16 +323,40 @@ class _MainPageState extends State<MainPage> {
             .toList();
 
     if (filteredOrders.isEmpty) {
-      return const Center(
-        child: Text(
-          'No new order requests.',
-          style: TextStyle(fontFamily: 'Sen'),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(48.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.receipt_long_outlined,
+                size: 80,
+                color: Colors.grey[300],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No Active Orders',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'New orders will appear here.',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return ListView.builder(
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: filteredOrders.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final order = filteredOrders[index];
         return _buildOrderCard(index, order);
@@ -285,66 +366,116 @@ class _MainPageState extends State<MainPage> {
 
   Widget _buildSummary() {
     return Card(
-      elevation: 4,
-      color: const Color.fromARGB(209, 255, 94, 0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _summaryBox(orderCount.toString(), 'ORDERS'),
-            Container(
-              width: 1,
-              height: 40,
-              color: const Color.fromARGB(255, 255, 255, 255),
-            ),
-            _summaryBox(currencyFormatter.format(incomeCount), 'TOTAL INCOME'),
-          ],
+      elevation: 8,
+      shadowColor: primaryColor.withOpacity(0.2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [primaryColor, primaryColor.withOpacity(0.8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _summaryBox(
+                orderCount.toString(),
+                'ORDERS',
+                Icons.receipt_long_outlined,
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withOpacity(0.5),
+              ),
+              _summaryBox(
+                currencyFormatter.format(incomeCount),
+                'INCOME',
+                Icons.account_balance_wallet_outlined,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildOrderCard(int index, Order order) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
-        child: Row(
+  Widget _summaryBox(String value, String label, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white, size: 36),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const CircleAvatar(
-              radius: 26,
-              backgroundImage: AssetImage('assets/avatar.png'),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    order.customerName ?? 'Unknown Customer',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      fontFamily: 'Sen',
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    currencyFormatter.format(order.totalPrice ?? 0),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                      fontFamily: 'Sen',
-                    ),
-                  ),
-                ],
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
-            ..._buildOrderActions(order, index),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.9),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrderCard(int index, Order order) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(
+                  radius: 26,
+                  backgroundImage: AssetImage('assets/avatar.png'),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        order.customerName ?? 'Unknown Customer',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        currencyFormatter.format(order.grandTotal ?? 0),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: _buildOrderActions(order, index),
+            ),
           ],
         ),
       ),
@@ -357,24 +488,25 @@ class _MainPageState extends State<MainPage> {
       case 'waiting':
         return [
           _roundedButton(
-            'Accept',
-            const Color(0xFFFF7622),
+            'Decline',
             Colors.white,
-            () => _handleAccept(order.orderId, index),
+            redColor,
+            () => _handleDecline(order.orderId, index),
+            borderColor: redColor,
           ),
           const SizedBox(width: 8),
           _roundedButton(
-            'Decline',
-            Colors.red,
+            'Accept',
+            primaryColor,
             Colors.white,
-            () => _handleDecline(order.orderId, index),
+            () => _handleAccept(order.orderId, index),
           ),
         ];
       case 'received':
         return [
           _roundedButton(
             'Details',
-            const Color(0xFFFF7622),
+            primaryColor,
             Colors.white,
             () => _showOrderDetailsDialog(index, order),
           ),
@@ -383,7 +515,7 @@ class _MainPageState extends State<MainPage> {
         return [
           _roundedButton(
             'Finish',
-            Colors.green,
+            greenColor,
             Colors.white,
             () => _handleFinish(order.orderId),
           ),
@@ -395,35 +527,16 @@ class _MainPageState extends State<MainPage> {
 
   void _handleError(dynamic e, String defaultMessage) {
     String errorMessage = defaultMessage;
-    String errorString = e.toString();
-    if (errorString.contains('{') && errorString.contains('}')) {
-      final jsonStartIndex = errorString.indexOf('{');
-      try {
-        final jsonString = errorString.substring(jsonStartIndex);
-        final jsonResponse = json.decode(jsonString);
-        if (jsonResponse['message'] != null) {
-          errorMessage = jsonResponse['message'];
-        }
-      } catch (jsonError) {
-        print("Failed to parse error JSON: $jsonError");
-        errorMessage = 'An unexpected error occurred.';
-      }
-    }
-    _showErrorSnackBar(errorMessage);
+    // Simple error handling for demonstration.
+    _showStyledSnackBar(errorMessage, isError: true);
   }
 
   Future<void> _handleAccept(int orderId, int index) async {
     try {
       final message = await OrderService.acceptOrder(orderId);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message ?? 'Order accepted successfully.',
-            style: const TextStyle(fontFamily: 'Sen'),
-          ),
-          backgroundColor: Colors.green,
-        ),
+      _showStyledSnackBar(
+        message ?? 'Order accepted successfully.',
+        isSuccess: true,
       );
       loadOrders();
     } catch (e) {
@@ -434,16 +547,7 @@ class _MainPageState extends State<MainPage> {
   Future<void> _handleDecline(int orderId, int index) async {
     try {
       final message = await OrderService.rejectOrder(orderId);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message ?? 'Order declined.',
-            style: const TextStyle(fontFamily: 'Sen'),
-          ),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      _showStyledSnackBar(message ?? 'Order declined.');
       loadOrders();
     } catch (e) {
       _handleError(e, 'Failed to decline order.');
@@ -453,15 +557,9 @@ class _MainPageState extends State<MainPage> {
   Future<void> _handleDeliver(int orderId) async {
     try {
       final message = await OrderService.deliverOrder(orderId);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message ?? 'Order is now out for delivery.',
-            style: const TextStyle(fontFamily: 'Sen'),
-          ),
-          backgroundColor: Colors.green,
-        ),
+      _showStyledSnackBar(
+        message ?? 'Order is now out for delivery.',
+        isSuccess: true,
       );
       loadOrders();
     } catch (e) {
@@ -472,56 +570,15 @@ class _MainPageState extends State<MainPage> {
   Future<void> _handleFinish(int orderId) async {
     try {
       final message = await OrderService.finishOrder(orderId);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message ?? 'Order finished successfully.',
-            style: const TextStyle(fontFamily: 'Sen'),
-          ),
-          backgroundColor: Colors.green,
-        ),
+      _showStyledSnackBar(
+        message ?? 'Order finished successfully.',
+        isSuccess: true,
       );
       loadOrders();
       loadPorter();
     } catch (e) {
       _handleError(e, 'Failed to finish order.');
     }
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: const TextStyle(fontFamily: 'Sen')),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-
-  Widget _summaryBox(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Sen',
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[300],
-            fontFamily: 'Sen',
-          ),
-        ),
-      ],
-    );
   }
 
   void _showOrderDetailsDialog(int index, Order order) {
@@ -620,23 +677,21 @@ class _MainPageState extends State<MainPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF7622),
+                          backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
-                          ),
-                          textStyle: const TextStyle(
-                            fontFamily: 'Sen',
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         onPressed: () {
                           Navigator.pop(context);
                           _handleDeliver(order.orderId);
                         },
-                        child: const Text("START DELIVERY"),
+                        child: const Text(
+                          "START DELIVERY",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ],
@@ -695,13 +750,7 @@ class _MainPageState extends State<MainPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            name,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Sen',
-            ),
-          ),
+          Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
           const Divider(height: 16),
           ...items.map(
             (item) => Padding(
@@ -709,29 +758,16 @@ class _MainPageState extends State<MainPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${item['name'] ?? 'Item'} x${item['qty'] ?? 1}',
-                    style: const TextStyle(fontFamily: 'Sen'),
+                  Expanded(
+                    child: Text(
+                      '${item['name'] ?? 'Item'} x${item['qty'] ?? 1}',
+                    ),
                   ),
-                  Text(
-                    currencyFormatter.format(item['price'] ?? 0),
-                    style: const TextStyle(fontFamily: 'Sen'),
-                  ),
+                  Text(currencyFormatter.format(item['price'] ?? 0)),
                 ],
               ),
             ),
           ),
-          if (note != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Catatan: $note',
-              style: const TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                fontFamily: 'Sen',
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -747,7 +783,6 @@ class _MainPageState extends State<MainPage> {
             label,
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              fontFamily: 'Sen',
               fontSize: isBold ? 16 : 14,
               color: isBold ? Colors.black : Colors.grey.shade700,
             ),
@@ -757,7 +792,6 @@ class _MainPageState extends State<MainPage> {
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
               fontSize: isBold ? 16 : 14,
-              fontFamily: 'Sen',
             ),
           ),
         ],
@@ -769,18 +803,26 @@ class _MainPageState extends State<MainPage> {
     String text,
     Color bgColor,
     Color textColor,
-    VoidCallback onPressed,
-  ) {
+    VoidCallback onPressed, {
+    Color? borderColor,
+  }) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: bgColor,
         foregroundColor: textColor,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: bgColor == Colors.white ? 0 : 2,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side:
+              borderColor != null
+                  ? BorderSide(color: borderColor)
+                  : BorderSide.none,
+        ),
         textStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
           fontFamily: 'Sen',
         ),
       ),
