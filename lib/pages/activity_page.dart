@@ -35,7 +35,13 @@ class _ActivityPageState extends State<ActivityPage> {
       setState(() => isLoading = true);
     }
     try {
+      // Menggunakan fetchActivity yang seharusnya mengambil semua order (termasuk finished/canceled)
       final result = await OrderService.fetchActivity();
+
+      // --- PERUBAHAN: Mengurutkan daftar pesanan berdasarkan orderId ---
+      // Pesanan diurutkan berdasarkan ID, yang terbesar akan muncul di paling atas.
+      result.sort((a, b) => b.orderId.compareTo(a.orderId));
+
       if (mounted) {
         setState(() {
           orders = result;
@@ -119,7 +125,7 @@ class _ActivityPageState extends State<ActivityPage> {
           ),
         ),
         title: Text(
-          order.customerName ?? 'Unknown Customer',
+          order.customerName,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontFamily: 'Sen',
@@ -201,13 +207,13 @@ class _ActivityPageState extends State<ActivityPage> {
                     _buildInfoRow(
                       Icons.person_outline,
                       "CUSTOMER",
-                      order.customerName ?? 'N/A',
+                      order.customerName,
                     ),
                     const SizedBox(height: 12),
                     _buildInfoRow(
                       Icons.location_on_outlined,
                       "DELIVERED TO",
-                      order.tenantLocationName ?? 'N/A',
+                      order.tenantLocationName,
                     ),
                     const Divider(height: 32, thickness: 1),
                     Text(
@@ -222,18 +228,17 @@ class _ActivityPageState extends State<ActivityPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children:
-                              order.items.map((item) {
+                              order.items.map((orderItem) {
                                 return _restaurantCard(
-                                  name: item.tenantName ?? 'Unknown Tenant',
+                                  name: orderItem.tenantName,
                                   items:
-                                      item.items
+                                      orderItem.items
                                           .map(
                                             (p) => {
-                                              'name':
-                                                  p.productName ??
-                                                  'Unknown Item',
-                                              'qty': p.quantity ?? 1,
-                                              'price': p.price ?? 0,
+                                              'name': p.productName,
+                                              'qty': p.quantity,
+                                              'price': p.price,
+                                              'notes': p.notes,
                                             },
                                           )
                                           .toList(),
@@ -313,7 +318,6 @@ class _ActivityPageState extends State<ActivityPage> {
   Widget _restaurantCard({
     required String name,
     required List<Map<String, dynamic>> items,
-    String? note,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -335,35 +339,42 @@ class _ActivityPageState extends State<ActivityPage> {
           const Divider(height: 16),
           ...items.map(
             (item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      '${item['name'] ?? 'Item'} x${item['qty'] ?? 1}',
-                      style: const TextStyle(fontFamily: 'Sen'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${item['name'] ?? 'Item'} x${item['qty'] ?? 1}',
+                          style: const TextStyle(fontFamily: 'Sen'),
+                        ),
+                      ),
+                      Text(
+                        currencyFormatter.format(item['price'] ?? 0),
+                        style: const TextStyle(fontFamily: 'Sen'),
+                      ),
+                    ],
+                  ),
+                  if (item['notes'] != null && item['notes'].isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, left: 16),
+                      child: Text(
+                        'Catatan: "${item['notes']}"',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey.shade700,
+                          fontFamily: 'Sen',
+                        ),
+                      ),
                     ),
-                  ),
-                  Text(
-                    currencyFormatter.format(item['price'] ?? 0),
-                    style: const TextStyle(fontFamily: 'Sen'),
-                  ),
                 ],
               ),
             ),
           ),
-          if (note != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Catatan: $note',
-              style: const TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                fontFamily: 'Sen',
-              ),
-            ),
-          ],
         ],
       ),
     );

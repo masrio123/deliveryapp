@@ -11,22 +11,26 @@ class PorterProfile {
     required this.accountNumber,
   });
 
+  // Factory constructor ini akan membuat object dari JSON
   factory PorterProfile.fromJson(Map<String, dynamic> json) {
     return PorterProfile(
-      porterName: json['porter_name'],
-      porterNrp: json['porter_nrp'],
-      department: json['department'],
-      accountNumber: json['account_number'],
+      // Menggunakan '??' untuk memberi nilai default jika data null
+      porterName: json['porter_name'] ?? 'No Name',
+      porterNrp: json['porter_nrp'] ?? 'No NRP',
+      department: json['department'] ?? 'N/A',
+      accountNumber: json['account_number'] ?? 'N/A',
     );
   }
 }
 
+// --- KELAS BARU DITAMBAHKAN DI SINI ---
+// Model untuk menangani response status online porter
 class PorterStatus {
   final bool porterIsOnline;
 
   PorterStatus({required this.porterIsOnline});
 
   factory PorterStatus.fromJson(Map<String, dynamic> json) {
-    return PorterStatus(porterIsOnline: json['porter_isOnline']);
+    return PorterStatus(porterIsOnline: json['porter_isOnline'] ?? false);
   }
 }

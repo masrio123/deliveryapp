@@ -21,13 +21,14 @@ class PorterService {
       final porterId = await getPorterId();
 
       if (token == null || porterId == null) {
-        throw Exception(
-          'Token atau Porter ID tidak ditemukan. Harap login kembali.',
-        );
+        throw Exception('Token atau Porter ID tidak ditemukan.');
       }
 
+      // Pastikan URL Anda benar. Dari kode Laravel, seharusnya tidak ada 'profile' di URL.
       final response = await http.post(
-        Uri.parse('$baseURL/porters/profile/$porterId'),
+        Uri.parse(
+          '$baseURL/porters/profile/$porterId',
+        ), // Sesuaikan jika URL berbeda
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -38,8 +39,19 @@ class PorterService {
         print(
           '📨 [DEBUG] Response body for fetchPorterProfile: ${response.body}',
         );
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        return PorterProfile.fromJson(data);
+
+        // --- PERBAIKAN UTAMA DI SINI ---
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+        // Cek dulu apakah 'success' adalah true dan 'data' ada
+        if (responseData['success'] == true && responseData['data'] != null) {
+          // Kirim HANYA bagian 'data' ke FromJson
+          return PorterProfile.fromJson(responseData['data']);
+        } else {
+          throw Exception(
+            responseData['message'] ?? 'Gagal memuat data profil.',
+          );
+        }
       } else {
         print('❌ [DEBUG] Gagal fetchPorterProfile: ${response.statusCode}');
         throw Exception(

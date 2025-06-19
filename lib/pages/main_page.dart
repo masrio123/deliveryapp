@@ -4,15 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Sesuaikan path import dengan struktur folder Anda
-import 'package:petraporter_deliveryapp/pages/account_page.dart';
-import 'package:petraporter_deliveryapp/pages/activity_page.dart';
 import 'package:petraporter_deliveryapp/services/order_service.dart';
 import 'package:petraporter_deliveryapp/models/order.dart';
 import 'package:petraporter_deliveryapp/services/profile_service.dart';
 import 'package:petraporter_deliveryapp/login/login.dart';
 
-// --- STYLING CONSTANTS ---
 const primaryColor = Color(0xFFFF7622);
 const secondaryColor = Color(0xFFFFC529);
 const backgroundColor = Color(0xFFF8F9FA);
@@ -65,16 +61,17 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  List<Order> orders = [];
+  // --- DIHILANGKAN ---
+  // GlobalKey untuk AnimatedList tidak lagi diperlukan.
+  // final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+
+  List<Order> _orders = [];
   bool isLoading = true;
   bool _isToggling = false;
   bool isOnline = false;
-  int currentIndex = 0;
   String username = "Porter";
-
   int orderCount = 0;
   int incomeCount = 0;
-
   Timer? _timer;
 
   final currencyFormatter = NumberFormat.currency(
@@ -95,7 +92,7 @@ class _MainPageState extends State<MainPage> {
     await Future.wait([
       checkLoginStatus(),
       loadStatusPorter(),
-      loadOrders(),
+      loadOrders(), // Parameter isInitialLoad dihilangkan
       loadPorter(),
     ]);
     if (mounted) setState(() => isLoading = false);
@@ -109,23 +106,41 @@ class _MainPageState extends State<MainPage> {
 
   void startInterval() {
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      if (currentIndex == 0 && mounted && !isLoading) {
+      if (mounted && !isLoading) {
         loadOrders();
         loadPorter();
       }
     });
   }
 
+  // --- DIMODIFIKASI ---
+  // Logika diperbarui untuk langsung mengubah state tanpa animasi.
   Future<void> loadOrders() async {
     try {
       final result = await OrderService.fetchActiveOrder();
-      if (mounted) {
-        setState(() => orders = result);
-      }
+      if (!mounted) return;
+
+      final filteredOrders =
+          result
+              .where(
+                (order) =>
+                    order.orderStatus != 'canceled' &&
+                    order.orderStatus != 'finished',
+              )
+              .toList();
+
+      // Langsung update state list, tidak ada lagi pengecekan isInitialLoad
+      setState(() {
+        _orders = filteredOrders;
+      });
     } catch (e) {
       print('Error fetching orders: $e');
     }
   }
+
+  // --- DIHILANGKAN ---
+  // Fungsi untuk update list dengan animasi tidak lagi diperlukan.
+  // void _updateOrderListWithAnimation(List<Order> newOrders) { ... }
 
   Future<void> loadPorter() async {
     try {
@@ -189,12 +204,7 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Kembali ke struktur awal tanpa BottomNavigationBar
-    return Scaffold(
-      body: SafeArea(
-        child: _buildOrderPage(), // Langsung menampilkan halaman order
-      ),
-    );
+    return Scaffold(body: SafeArea(child: _buildOrderPage()));
   }
 
   Widget _buildOrderPage() {
@@ -202,7 +212,6 @@ class _MainPageState extends State<MainPage> {
       onRefresh: _fetchAllData,
       color: primaryColor,
       child: ListView(
-        // Menggunakan ListView agar bisa scroll
         padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
           Padding(
@@ -227,7 +236,7 @@ class _MainPageState extends State<MainPage> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildOrderList(), // Widget ini akan menangani paddingnya sendiri
+          _buildOrderList(),
         ],
       ),
     );
@@ -236,8 +245,7 @@ class _MainPageState extends State<MainPage> {
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment:
-          CrossAxisAlignment.center, // Memastikan alignment vertikal
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,8 +311,10 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  // --- DIMODIFIKASI ---
+  // Mengganti AnimatedList dengan Column untuk menghilangkan animasi.
   Widget _buildOrderList() {
-    if (isLoading) {
+    if (isLoading && _orders.isEmpty) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
@@ -313,16 +323,7 @@ class _MainPageState extends State<MainPage> {
       );
     }
 
-    final filteredOrders =
-        orders
-            .where(
-              (order) =>
-                  order.orderStatus != 'canceled' &&
-                  order.orderStatus != 'finished',
-            )
-            .toList();
-
-    if (filteredOrders.isEmpty) {
+    if (_orders.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(48.0),
@@ -351,18 +352,22 @@ class _MainPageState extends State<MainPage> {
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: filteredOrders.length,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final order = filteredOrders[index];
-        return _buildOrderCard(index, order);
-      },
+    // Menggunakan Column untuk menampilkan daftar tanpa animasi.
+    return Column(
+      children:
+          _orders.map((order) {
+            // Padding ditambahkan di sini, yang sebelumnya ada di dalam _buildAnimatedOrderCard
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: _buildOrderCard(order),
+            );
+          }).toList(),
     );
   }
+
+  // --- DIHILANGKAN ---
+  // Wrapper untuk animasi tidak lagi dibutuhkan.
+  // Widget _buildAnimatedOrderCard(Animation<double> animation, Order order) { ... }
 
   Widget _buildSummary() {
     return Card(
@@ -435,7 +440,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget _buildOrderCard(int index, Order order) {
+  Widget _buildOrderCard(Order order) {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -474,7 +479,7 @@ class _MainPageState extends State<MainPage> {
             const Divider(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
-              children: _buildOrderActions(order, index),
+              children: _buildOrderActions(order),
             ),
           ],
         ),
@@ -482,7 +487,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  List<Widget> _buildOrderActions(Order order, int index) {
+  List<Widget> _buildOrderActions(Order order) {
     final status = order.orderStatus ?? 'unknown';
     switch (status) {
       case 'waiting':
@@ -491,7 +496,7 @@ class _MainPageState extends State<MainPage> {
             'Decline',
             Colors.white,
             redColor,
-            () => _handleDecline(order.orderId, index),
+            () => _handleDecline(order.orderId),
             borderColor: redColor,
           ),
           const SizedBox(width: 8),
@@ -499,7 +504,7 @@ class _MainPageState extends State<MainPage> {
             'Accept',
             primaryColor,
             Colors.white,
-            () => _handleAccept(order.orderId, index),
+            () => _handleAccept(order.orderId),
           ),
         ];
       case 'received':
@@ -508,7 +513,7 @@ class _MainPageState extends State<MainPage> {
             'Details',
             primaryColor,
             Colors.white,
-            () => _showOrderDetailsDialog(index, order),
+            () => _showOrderDetailsDialog(order),
           ),
         ];
       case 'on-delivery':
@@ -526,28 +531,23 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _handleError(dynamic e, String defaultMessage) {
-    String errorMessage = defaultMessage;
-    // Simple error handling for demonstration.
-    _showStyledSnackBar(errorMessage, isError: true);
+    _showStyledSnackBar(defaultMessage, isError: true);
   }
 
-  Future<void> _handleAccept(int orderId, int index) async {
+  Future<void> _handleAccept(int orderId) async {
     try {
       final message = await OrderService.acceptOrder(orderId);
-      _showStyledSnackBar(
-        message ?? 'Order accepted successfully.',
-        isSuccess: true,
-      );
+      _showStyledSnackBar(message, isSuccess: true);
       loadOrders();
     } catch (e) {
       _handleError(e, 'Failed to accept order.');
     }
   }
 
-  Future<void> _handleDecline(int orderId, int index) async {
+  Future<void> _handleDecline(int orderId) async {
     try {
       final message = await OrderService.rejectOrder(orderId);
-      _showStyledSnackBar(message ?? 'Order declined.');
+      _showStyledSnackBar(message);
       loadOrders();
     } catch (e) {
       _handleError(e, 'Failed to decline order.');
@@ -557,10 +557,7 @@ class _MainPageState extends State<MainPage> {
   Future<void> _handleDeliver(int orderId) async {
     try {
       final message = await OrderService.deliverOrder(orderId);
-      _showStyledSnackBar(
-        message ?? 'Order is now out for delivery.',
-        isSuccess: true,
-      );
+      _showStyledSnackBar(message, isSuccess: true);
       loadOrders();
     } catch (e) {
       _handleError(e, 'Failed to start delivery.');
@@ -570,10 +567,7 @@ class _MainPageState extends State<MainPage> {
   Future<void> _handleFinish(int orderId) async {
     try {
       final message = await OrderService.finishOrder(orderId);
-      _showStyledSnackBar(
-        message ?? 'Order finished successfully.',
-        isSuccess: true,
-      );
+      _showStyledSnackBar(message, isSuccess: true);
       loadOrders();
       loadPorter();
     } catch (e) {
@@ -581,7 +575,7 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
-  void _showOrderDetailsDialog(int index, Order order) {
+  void _showOrderDetailsDialog(Order order) {
     showDialog(
       context: context,
       builder:
@@ -636,21 +630,10 @@ class _MainPageState extends State<MainPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children:
-                              order.items.map((item) {
+                              order.items.map((orderItem) {
                                 return _restaurantCard(
-                                  name: item.tenantName ?? 'Unknown Tenant',
-                                  items:
-                                      item.items
-                                          .map(
-                                            (p) => {
-                                              'name':
-                                                  p.productName ??
-                                                  'Unknown Item',
-                                              'qty': p.quantity ?? 1,
-                                              'price': p.price ?? 0,
-                                            },
-                                          )
-                                          .toList(),
+                                  name: orderItem.tenantName,
+                                  items: orderItem.items,
                                 );
                               }).toList(),
                         ),
@@ -680,9 +663,6 @@ class _MainPageState extends State<MainPage> {
                           backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
                         ),
                         onPressed: () {
                           Navigator.pop(context);
@@ -737,8 +717,7 @@ class _MainPageState extends State<MainPage> {
 
   Widget _restaurantCard({
     required String name,
-    required List<Map<String, dynamic>> items,
-    String? note,
+    required List<ProductItem> items,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -754,16 +733,31 @@ class _MainPageState extends State<MainPage> {
           const Divider(height: 16),
           ...items.map(
             (item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      '${item['name'] ?? 'Item'} x${item['qty'] ?? 1}',
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text('${item.productName} x${item.quantity}'),
+                      ),
+                      Text(currencyFormatter.format(item.price)),
+                    ],
                   ),
-                  Text(currencyFormatter.format(item['price'] ?? 0)),
+                  if (item.notes != null && item.notes!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, left: 16),
+                      child: Text(
+                        'Catatan: "${item.notes!}"',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
