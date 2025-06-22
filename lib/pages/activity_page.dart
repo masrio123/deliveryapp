@@ -153,9 +153,9 @@ class _ActivityPageState extends State<ActivityPage> {
 
   Color _getStatusColor(String? status) {
     switch (status) {
-      case 'finished':
+      case 'Finished':
         return Colors.green;
-      case 'canceled':
+      case 'Canceled':
         return Colors.red;
       default:
         return Colors.grey;
@@ -164,9 +164,9 @@ class _ActivityPageState extends State<ActivityPage> {
 
   IconData _getStatusIcon(String? status) {
     switch (status) {
-      case 'finished':
+      case 'Finished':
         return Icons.check_circle_outline;
-      case 'canceled':
+      case 'Canceled':
         return Icons.cancel_outlined;
       default:
         return Icons.history;
@@ -213,7 +213,7 @@ class _ActivityPageState extends State<ActivityPage> {
                     _buildInfoRow(
                       Icons.location_on_outlined,
                       "DELIVERED TO",
-                      order.tenantLocationName,
+                      order.deliveryPointName,
                     ),
                     const Divider(height: 32, thickness: 1),
                     Text(

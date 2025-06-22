@@ -24,11 +24,10 @@ class PorterService {
         throw Exception('Token atau Porter ID tidak ditemukan.');
       }
 
-      // Pastikan URL Anda benar. Dari kode Laravel, seharusnya tidak ada 'profile' di URL.
+      // --- PERBAIKAN DI SINI ---
+      // Mengubah method dari GET ke POST dan menyesuaikan URL sesuai API Anda.
       final response = await http.post(
-        Uri.parse(
-          '$baseURL/porters/profile/$porterId',
-        ), // Sesuaikan jika URL berbeda
+        Uri.parse('$baseURL/porters/profile/$porterId'), // URL disesuaikan
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -39,13 +38,9 @@ class PorterService {
         print(
           '📨 [DEBUG] Response body for fetchPorterProfile: ${response.body}',
         );
-
-        // --- PERBAIKAN UTAMA DI SINI ---
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
-        // Cek dulu apakah 'success' adalah true dan 'data' ada
         if (responseData['success'] == true && responseData['data'] != null) {
-          // Kirim HANYA bagian 'data' ke FromJson
           return PorterProfile.fromJson(responseData['data']);
         } else {
           throw Exception(
@@ -64,7 +59,50 @@ class PorterService {
     }
   }
 
-  /// GET: Mengambil status isOnline porter
+  // CATATAN: Fungsi ini belum memiliki route di daftar API yang Anda berikan.
+  // Pastikan route `PUT /porters/{id}/update-bank` ada di Laravel.
+  static Future<bool> updatePorterBankDetails({
+    required String bankName,
+    required String accountNumber,
+    required String username,
+  }) async {
+    try {
+      final token = await getToken();
+      final porterId = await getPorterId();
+
+      if (token == null || porterId == null) {
+        throw Exception('Token atau Porter ID tidak ditemukan.');
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseURL/porters/$porterId/update-bank'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'bank_name': bankName,
+          'account_numbers': accountNumber,
+          'username': username,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ [DEBUG] Profil bank berhasil diperbarui.');
+        return true;
+      } else {
+        print('❌ [DEBUG] Gagal update profil bank: ${response.statusCode}');
+        print('Error body: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ [ERROR] updatePorterBankDetails exception: $e');
+      return false;
+    }
+  }
+
+  // URL di sini sudah sesuai dengan API Anda
   static Future<PorterStatus> getPorterOnlineStatus() async {
     try {
       final token = await getToken();
@@ -94,7 +132,7 @@ class PorterService {
     }
   }
 
-  /// PUT: Mengupdate status isOnline porter
+  // URL di sini sudah sesuai dengan API Anda
   static Future<bool> updatePorterOnlineStatus(bool isOnline) async {
     try {
       final token = await getToken();

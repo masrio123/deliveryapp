@@ -21,6 +21,7 @@ class Order {
   final String customerName;
   final int? tenantLocationId;
   final String tenantLocationName;
+  final String deliveryPointName;
   final String orderStatus;
   final List<OrderItem> items;
   final int? totalPrice;
@@ -32,7 +33,8 @@ class Order {
     this.cartId,
     this.customerId,
     required this.customerName,
-    this.tenantLocationId,
+    required this.tenantLocationId,
+    required this.deliveryPointName,
     required this.tenantLocationName,
     required this.orderStatus,
     required this.items,
@@ -48,6 +50,8 @@ class Order {
       customerId: _parseNullableInt(json['customer_id']),
       customerName: json['customer_name'] ?? 'Customer Dihapus',
       tenantLocationId: _parseNullableInt(json['tenant_location_id']),
+      deliveryPointName:
+          json['delivery_point_name'] ?? 'Lokasi Tidak Diketahui',
       tenantLocationName:
           json['tenant_location_name'] ?? 'Lokasi Tidak Ditemukan',
       orderStatus: json['order_status'] ?? 'unknown',

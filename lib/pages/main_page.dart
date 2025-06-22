@@ -4,11 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Sesuaikan path import dengan struktur folder Anda
+import 'package:petraporter_deliveryapp/pages/account_page.dart';
+import 'package:petraporter_deliveryapp/pages/activity_page.dart';
 import 'package:petraporter_deliveryapp/services/order_service.dart';
 import 'package:petraporter_deliveryapp/models/order.dart';
 import 'package:petraporter_deliveryapp/services/profile_service.dart';
 import 'package:petraporter_deliveryapp/login/login.dart';
+import 'package:petraporter_deliveryapp/pages/chat_page.dart';
 
+// --- STYLING CONSTANTS ---
 const primaryColor = Color(0xFFFF7622);
 const secondaryColor = Color(0xFFFFC529);
 const backgroundColor = Color(0xFFF8F9FA);
@@ -61,17 +66,16 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  // --- DIHILANGKAN ---
-  // GlobalKey untuk AnimatedList tidak lagi diperlukan.
-  // final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
-
-  List<Order> _orders = [];
+  List<Order> orders = [];
   bool isLoading = true;
   bool _isToggling = false;
   bool isOnline = false;
+  int currentIndex = 0;
   String username = "Porter";
+
   int orderCount = 0;
   int incomeCount = 0;
+
   Timer? _timer;
 
   final currencyFormatter = NumberFormat.currency(
@@ -92,7 +96,7 @@ class _MainPageState extends State<MainPage> {
     await Future.wait([
       checkLoginStatus(),
       loadStatusPorter(),
-      loadOrders(), // Parameter isInitialLoad dihilangkan
+      loadOrders(),
       loadPorter(),
     ]);
     if (mounted) setState(() => isLoading = false);
@@ -106,41 +110,23 @@ class _MainPageState extends State<MainPage> {
 
   void startInterval() {
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      if (mounted && !isLoading) {
+      if (currentIndex == 0 && mounted && !isLoading) {
         loadOrders();
         loadPorter();
       }
     });
   }
 
-  // --- DIMODIFIKASI ---
-  // Logika diperbarui untuk langsung mengubah state tanpa animasi.
   Future<void> loadOrders() async {
     try {
       final result = await OrderService.fetchActiveOrder();
-      if (!mounted) return;
-
-      final filteredOrders =
-          result
-              .where(
-                (order) =>
-                    order.orderStatus != 'canceled' &&
-                    order.orderStatus != 'finished',
-              )
-              .toList();
-
-      // Langsung update state list, tidak ada lagi pengecekan isInitialLoad
-      setState(() {
-        _orders = filteredOrders;
-      });
+      if (mounted) {
+        setState(() => orders = result);
+      }
     } catch (e) {
       print('Error fetching orders: $e');
     }
   }
-
-  // --- DIHILANGKAN ---
-  // Fungsi untuk update list dengan animasi tidak lagi diperlukan.
-  // void _updateOrderListWithAnimation(List<Order> newOrders) { ... }
 
   Future<void> loadPorter() async {
     try {
@@ -242,6 +228,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  // --- DIPERBARUI --- Ikon chat global dihapus dari sini
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -273,6 +260,11 @@ class _MainPageState extends State<MainPage> {
         ),
         Row(
           children: [
+            // Tombol chat sudah tidak ada di sini
+            IconButton(
+              icon: const Icon(Icons.logout_outlined, color: textColor),
+              onPressed: _logout,
+            ),
             Switch(
               value: isOnline,
               activeColor: greenColor,
@@ -301,20 +293,14 @@ class _MainPageState extends State<MainPage> {
                         setState(() => _isToggling = false);
                       },
             ),
-            IconButton(
-              icon: const Icon(Icons.logout_outlined, color: textColor),
-              onPressed: _logout,
-            ),
           ],
         ),
       ],
     );
   }
 
-  // --- DIMODIFIKASI ---
-  // Mengganti AnimatedList dengan Column untuk menghilangkan animasi.
   Widget _buildOrderList() {
-    if (isLoading && _orders.isEmpty) {
+    if (isLoading) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
@@ -323,7 +309,16 @@ class _MainPageState extends State<MainPage> {
       );
     }
 
-    if (_orders.isEmpty) {
+    final filteredOrders =
+        orders
+            .where(
+              (order) =>
+                  order.orderStatus != 'Canceled' &&
+                  order.orderStatus != 'Finished',
+            )
+            .toList();
+
+    if (filteredOrders.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(48.0),
@@ -352,22 +347,18 @@ class _MainPageState extends State<MainPage> {
       );
     }
 
-    // Menggunakan Column untuk menampilkan daftar tanpa animasi.
-    return Column(
-      children:
-          _orders.map((order) {
-            // Padding ditambahkan di sini, yang sebelumnya ada di dalam _buildAnimatedOrderCard
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              child: _buildOrderCard(order),
-            );
-          }).toList(),
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: filteredOrders.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final order = filteredOrders[index];
+        return _buildOrderCard(index, order);
+      },
     );
   }
-
-  // --- DIHILANGKAN ---
-  // Wrapper untuk animasi tidak lagi dibutuhkan.
-  // Widget _buildAnimatedOrderCard(Animation<double> animation, Order order) { ... }
 
   Widget _buildSummary() {
     return Card(
@@ -440,7 +431,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  Widget _buildOrderCard(Order order) {
+  Widget _buildOrderCard(int index, Order order) {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -479,7 +470,7 @@ class _MainPageState extends State<MainPage> {
             const Divider(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
-              children: _buildOrderActions(order),
+              children: _buildOrderActions(order, index),
             ),
           ],
         ),
@@ -487,16 +478,36 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  List<Widget> _buildOrderActions(Order order) {
+  // --- DIPERBARUI --- Logika penambahan tombol chat per order
+  List<Widget> _buildOrderActions(Order order, int index) {
     final status = order.orderStatus ?? 'unknown';
+    print('🎨 STATUS DETECTED for Order ID ${order.orderId}: "$status"');
+
+    // --- DITAMBAHKAN --- Widget tombol chat yang bisa dipakai ulang
+    final chatButton = IconButton(
+      icon: const Icon(Icons.chat_bubble_outline, color: primaryColor),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => ChatPage(
+                  orderId: order.orderId,
+                  recipientName: order.customerName ?? 'Customer',
+                ),
+          ),
+        );
+      },
+    );
+
     switch (status) {
-      case 'waiting':
+      case 'Waiting':
         return [
           _roundedButton(
             'Decline',
             Colors.white,
             redColor,
-            () => _handleDecline(order.orderId),
+            () => _handleDecline(order.orderId, index),
             borderColor: redColor,
           ),
           const SizedBox(width: 8),
@@ -504,20 +515,26 @@ class _MainPageState extends State<MainPage> {
             'Accept',
             primaryColor,
             Colors.white,
-            () => _handleAccept(order.orderId),
+            () => _handleAccept(order.orderId, index),
           ),
         ];
-      case 'received':
+      case 'Received':
         return [
+          // --- DITAMBAHKAN --- Tombol chat untuk status Received
+          chatButton,
+          const Spacer(), // Memberi jarak agar tombol lain ke kanan
           _roundedButton(
             'Details',
             primaryColor,
             Colors.white,
-            () => _showOrderDetailsDialog(order),
+            () => _showOrderDetailsDialog(index, order),
           ),
         ];
-      case 'on-delivery':
+      case 'On-Delivery':
         return [
+          // --- DITAMBAHKAN --- Tombol chat untuk status On-Delivery
+          chatButton,
+          const Spacer(), // Memberi jarak agar tombol lain ke kanan
           _roundedButton(
             'Finish',
             greenColor,
@@ -531,10 +548,12 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _handleError(dynamic e, String defaultMessage) {
-    _showStyledSnackBar(defaultMessage, isError: true);
+    String errorMessage = defaultMessage;
+    // Simple error handling for demonstration.
+    _showStyledSnackBar(errorMessage, isError: true);
   }
 
-  Future<void> _handleAccept(int orderId) async {
+  Future<void> _handleAccept(int orderId, int index) async {
     try {
       final message = await OrderService.acceptOrder(orderId);
       _showStyledSnackBar(message, isSuccess: true);
@@ -544,7 +563,7 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
-  Future<void> _handleDecline(int orderId) async {
+  Future<void> _handleDecline(int orderId, int index) async {
     try {
       final message = await OrderService.rejectOrder(orderId);
       _showStyledSnackBar(message);
@@ -575,7 +594,7 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
-  void _showOrderDetailsDialog(Order order) {
+  void _showOrderDetailsDialog(int index, Order order) {
     showDialog(
       context: context,
       builder:
@@ -615,7 +634,7 @@ class _MainPageState extends State<MainPage> {
                     _buildInfoRow(
                       Icons.location_on_outlined,
                       "DELIVER TO",
-                      order.tenantLocationName ?? 'N/A',
+                      order.deliveryPointName ?? 'N/A',
                     ),
                     const Divider(height: 32, thickness: 1),
                     Text(
@@ -630,10 +649,21 @@ class _MainPageState extends State<MainPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children:
-                              order.items.map((orderItem) {
+                              order.items.map((item) {
                                 return _restaurantCard(
-                                  name: orderItem.tenantName,
-                                  items: orderItem.items,
+                                  name: item.tenantName ?? 'Unknown Tenant',
+                                  items:
+                                      item.items
+                                          .map(
+                                            (p) => {
+                                              'name':
+                                                  p.productName ??
+                                                  'Unknown Item',
+                                              'qty': p.quantity ?? 1,
+                                              'price': p.price ?? 0,
+                                            },
+                                          )
+                                          .toList(),
                                 );
                               }).toList(),
                         ),
@@ -663,6 +693,9 @@ class _MainPageState extends State<MainPage> {
                           backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () {
                           Navigator.pop(context);
@@ -717,7 +750,8 @@ class _MainPageState extends State<MainPage> {
 
   Widget _restaurantCard({
     required String name,
-    required List<ProductItem> items,
+    required List<Map<String, dynamic>> items,
+    String? note,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -733,31 +767,16 @@ class _MainPageState extends State<MainPage> {
           const Divider(height: 16),
           ...items.map(
             (item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.symmetric(vertical: 2.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text('${item.productName} x${item.quantity}'),
-                      ),
-                      Text(currencyFormatter.format(item.price)),
-                    ],
-                  ),
-                  if (item.notes != null && item.notes!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 16),
-                      child: Text(
-                        'Catatan: "${item.notes!}"',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
+                  Expanded(
+                    child: Text(
+                      '${item['name'] ?? 'Item'} x${item['qty'] ?? 1}',
                     ),
+                  ),
+                  Text(currencyFormatter.format(item['price'] ?? 0)),
                 ],
               ),
             ),

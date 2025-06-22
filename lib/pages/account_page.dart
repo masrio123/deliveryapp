@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../services/profile_service.dart';
 import '../models/profile.dart';
 
-// --- PERUBAHAN --- Menyamakan konstanta warna dengan halaman Customer
 const Color _primaryColor = Color(0xFFFF7622);
 const Color _backgroundColor = Color(0xFFFFFFFF);
 const Color _textColor = Color(0xFF333333);
@@ -19,8 +18,13 @@ class _AccountPageState extends State<AccountPage> {
   PorterProfile? _profile;
   bool _isLoading = true;
   bool _isEditing = false;
+  bool _isSaving = false;
 
-  final TextEditingController _rekeningController = TextEditingController();
+  // --- PERUBAHAN: Menambahkan controller untuk setiap field ---
+  final TextEditingController _bankNameController = TextEditingController();
+  final TextEditingController _accountNumberController =
+      TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
 
   @override
   void initState() {
@@ -39,7 +43,10 @@ class _AccountPageState extends State<AccountPage> {
       if (mounted) {
         setState(() {
           _profile = profile;
-          _rekeningController.text = profile.accountNumber;
+          // --- PERUBAHAN: Mengisi data ke semua controller ---
+          _bankNameController.text = profile.bankName;
+          _accountNumberController.text = profile.accountNumber;
+          _usernameController.text = profile.username;
           _isLoading = false;
         });
       }
@@ -47,14 +54,10 @@ class _AccountPageState extends State<AccountPage> {
       print('Gagal load profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Gagal memuat profil.'),
+          const SnackBar(
+            content: Text('Gagal memuat profil. Silakan coba lagi.'),
             backgroundColor: Colors.redAccent,
             behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
           ),
         );
         setState(() {
@@ -64,34 +67,40 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
-  void _toggleEditSave() {
-    if (_isEditing) {
-      final rekening = _rekeningController.text.trim();
-      if (rekening.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nomor rekening tidak boleh kosong')),
-        );
-        return;
-      }
+  // --- PERUBAHAN: Logika untuk menyimpan data ---
+  Future<void> _saveProfile() async {
+    setState(() {
+      _isSaving = true;
+    });
 
-      // if (mounted && _profile != null) {
-      //     setState(() {
-      //         _profile!.accountNumber = rekening;
-      //     });
-      // }
+    final success = await PorterService.updatePorterBankDetails(
+      bankName: _bankNameController.text,
+      accountNumber: _accountNumberController.text,
+      username: _usernameController.text,
+    );
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Nomor rekening berhasil disimpan: $rekening'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+          content: Text(
+            success
+                ? 'Profil bank berhasil diperbarui'
+                : 'Gagal memperbarui profil',
           ),
+          backgroundColor: success ? Colors.green : Colors.red,
+          behavior: SnackBarBehavior.floating,
         ),
       );
+      setState(() {
+        _isEditing = false;
+        _isSaving = false;
+      });
+      // Muat ulang profil untuk memastikan data sinkron
+      if (success) _loadProfile();
     }
+  }
 
+  void _toggleEdit() {
     setState(() {
       _isEditing = !_isEditing;
     });
@@ -99,13 +108,14 @@ class _AccountPageState extends State<AccountPage> {
 
   @override
   void dispose() {
-    _rekeningController.dispose();
+    _bankNameController.dispose();
+    _accountNumberController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- PERUBAHAN --- Mengadopsi struktur Scaffold dari halaman Customer
     return Scaffold(
       backgroundColor: _backgroundColor,
       appBar: AppBar(
@@ -135,7 +145,6 @@ class _AccountPageState extends State<AccountPage> {
         child: CircularProgressIndicator(color: _primaryColor),
       );
     }
-
     if (_profile == null) {
       return Center(
         child: Padding(
@@ -158,10 +167,6 @@ class _AccountPageState extends State<AccountPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
                 ),
                 onPressed: _loadProfile,
                 icon: const Icon(Icons.refresh),
@@ -172,21 +177,46 @@ class _AccountPageState extends State<AccountPage> {
         ),
       );
     }
-
-    return SingleChildScrollView(
+    return ListView(
+      // Menggunakan ListView agar bisa discroll
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      child: Column(
-        children: [
-          _buildProfileHeader(),
-          const SizedBox(height: 32),
-          _buildInfoDetails(),
-        ],
-      ),
+      children: [
+        _buildProfileHeader(),
+        const SizedBox(height: 32),
+        _buildInfoDetails(),
+        const SizedBox(height: 32),
+        if (_isSaving)
+          const Center(child: CircularProgressIndicator(color: _primaryColor)),
+        if (!_isSaving)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isEditing ? Colors.green : _primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: _isEditing ? _saveProfile : _toggleEdit,
+              child: Text(
+                _isEditing ? 'Simpan Perubahan' : 'Edit Detail Bank',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        if (_isEditing)
+          TextButton(onPressed: _toggleEdit, child: const Text("Batal")),
+      ],
     );
   }
 
-  // --- PERUBAHAN --- Widget disesuaikan untuk data Porter
   Widget _buildProfileHeader() {
+    // ... (kode tidak berubah)
     return Column(
       children: [
         const CircleAvatar(
@@ -205,7 +235,6 @@ class _AccountPageState extends State<AccountPage> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
-        // Menampilkan NRP di bawah nama, mirip identityNumber di Customer
         Text(
           _profile!.porterNrp,
           style: const TextStyle(fontSize: 16, color: _subtleTextColor),
@@ -214,8 +243,8 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  // --- PERUBAHAN --- Widget disesuaikan untuk data Porter dan fungsi edit
   Widget _buildInfoDetails() {
+    // ... (kode tidak berubah)
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
@@ -232,26 +261,42 @@ class _AccountPageState extends State<AccountPage> {
       ),
       child: Column(
         children: [
-          // Info Jurusan
           _buildInfoRow(
             label: "Jurusan",
             value: _profile!.department,
             icon: Icons.school_outlined,
           ),
           const Divider(height: 1),
-          // Info Nomor Rekening yang dapat diedit
-          _buildEditableRekeningRow(),
+          // --- PERUBAHAN: Menampilkan semua field bank ---
+          _buildBankInfoRow(
+            label: "Nama Bank",
+            controller: _bankNameController,
+            icon: Icons.business_outlined,
+          ),
+          const Divider(height: 1),
+          _buildBankInfoRow(
+            label: "Atas Nama",
+            controller: _usernameController,
+            icon: Icons.person_outline_rounded,
+          ),
+          const Divider(height: 1),
+          _buildBankInfoRow(
+            label: "No. Rekening",
+            controller: _accountNumberController,
+            icon: Icons.credit_card_outlined,
+            isNumeric: true,
+          ),
         ],
       ),
     );
   }
 
-  // Widget untuk baris info statis (Jurusan)
   Widget _buildInfoRow({
     required String label,
     required String value,
     required IconData icon,
   }) {
+    // ... (kode tidak berubah)
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: Row(
@@ -273,27 +318,30 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  // Widget khusus untuk baris Nomor Rekening yang bisa diedit
-  Widget _buildEditableRekeningRow() {
+  Widget _buildBankInfoRow({
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    bool isNumeric = false,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          const Icon(
-            Icons.account_balance_wallet_outlined,
-            color: _primaryColor,
-            size: 24,
-          ),
+          Icon(icon, color: _primaryColor, size: 24),
           const SizedBox(width: 16),
+          Text(label, style: const TextStyle(fontSize: 16, color: _textColor)),
+          const Spacer(),
           Expanded(
             child:
                 _isEditing
                     ? TextField(
-                      controller: _rekeningController,
-                      keyboardType: TextInputType.number,
-                      autofocus: true,
+                      controller: controller,
+                      textAlign: TextAlign.end,
+                      keyboardType:
+                          isNumeric ? TextInputType.number : TextInputType.text,
                       decoration: const InputDecoration.collapsed(
-                        hintText: 'Masukkan nomor rekening',
+                        hintText: '...',
                       ),
                       style: const TextStyle(
                         fontSize: 16,
@@ -301,33 +349,15 @@ class _AccountPageState extends State<AccountPage> {
                         color: _textColor,
                       ),
                     )
-                    : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Nomor Rekening",
-                          style: TextStyle(fontSize: 16, color: _textColor),
-                        ),
-                        Text(
-                          _rekeningController.text,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: _subtleTextColor,
-                          ),
-                        ),
-                      ],
+                    : Text(
+                      controller.text,
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: _subtleTextColor,
+                      ),
                     ),
-          ),
-          TextButton(
-            onPressed: _toggleEditSave,
-            child: Text(
-              _isEditing ? 'Save' : 'Edit',
-              style: const TextStyle(
-                color: _primaryColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
         ],
       ),
