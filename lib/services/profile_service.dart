@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constant/constant.dart';
 import '../models/profile.dart';
+import '../models/review.dart';
 
 class PorterService {
   static Future<String?> getToken() async {
@@ -89,7 +90,6 @@ class PorterService {
       );
 
       if (response.statusCode == 200) {
-        print('✅ [DEBUG] Profil bank berhasil diperbarui.');
         return true;
       } else {
         print('❌ [DEBUG] Gagal update profil bank: ${response.statusCode}');
@@ -162,6 +162,32 @@ class PorterService {
     } catch (e) {
       print('❌ [ERROR] updatePorterOnlineStatus: $e');
       return false;
+    }
+  }
+
+  static Future<List<PorterReview>> fetchPorterReviews() async {
+    final token = await getToken();
+    final porterId = await getPorterId();
+
+    if (token == null || porterId == null) {
+      throw Exception('Token atau Porter ID tidak ditemukan.');
+    }
+
+    final response = await http.get(
+      Uri.parse('$baseURL/porters/$porterId/reviews'),
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> jsonData = jsonDecode(response.body);
+      if (jsonData['success'] == true) {
+        final List reviews = jsonData['data'];
+        return reviews.map((r) => PorterReview.fromJson(r)).toList();
+      } else {
+        throw Exception(jsonData['message'] ?? 'Gagal memuat review');
+      }
+    } else {
+      throw Exception('Gagal fetch review: ${response.statusCode}');
     }
   }
 }

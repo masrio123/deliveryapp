@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/profile_service.dart';
 import '../models/profile.dart';
+import '../models/review.dart';
 
 const Color _primaryColor = Color(0xFFFF7622);
 const Color _backgroundColor = Color(0xFFFFFFFF);
@@ -20,11 +21,13 @@ class _AccountPageState extends State<AccountPage> {
   bool _isEditing = false;
   bool _isSaving = false;
 
-  // --- PERUBAHAN: Menambahkan controller untuk setiap field ---
   final TextEditingController _bankNameController = TextEditingController();
   final TextEditingController _accountNumberController =
       TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
+
+  List<PorterReview> _reviews = [];
+  bool _isReviewLoading = false;
 
   @override
   void initState() {
@@ -36,18 +39,21 @@ class _AccountPageState extends State<AccountPage> {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
+      _isReviewLoading = true;
     });
 
     try {
       final profile = await PorterService.fetchPorterProfile();
+      final reviews = await PorterService.fetchPorterReviews();
       if (mounted) {
         setState(() {
           _profile = profile;
-          // --- PERUBAHAN: Mengisi data ke semua controller ---
           _bankNameController.text = profile.bankName;
           _accountNumberController.text = profile.accountNumber;
           _usernameController.text = profile.username;
+          _reviews = reviews;
           _isLoading = false;
+          _isReviewLoading = false;
         });
       }
     } catch (e) {
@@ -62,12 +68,12 @@ class _AccountPageState extends State<AccountPage> {
         );
         setState(() {
           _isLoading = false;
+          _isReviewLoading = false;
         });
       }
     }
   }
 
-  // --- PERUBAHAN: Logika untuk menyimpan data ---
   Future<void> _saveProfile() async {
     setState(() {
       _isSaving = true;
@@ -95,7 +101,6 @@ class _AccountPageState extends State<AccountPage> {
         _isEditing = false;
         _isSaving = false;
       });
-      // Muat ulang profil untuk memastikan data sinkron
       if (success) _loadProfile();
     }
   }
@@ -178,13 +183,14 @@ class _AccountPageState extends State<AccountPage> {
       );
     }
     return ListView(
-      // Menggunakan ListView agar bisa discroll
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       children: [
         _buildProfileHeader(),
         const SizedBox(height: 32),
         _buildInfoDetails(),
-        const SizedBox(height: 32),
+        const SizedBox(height: 16),
+
+        // Tombol Edit Bank (diletakkan sebelum review)
         if (_isSaving)
           const Center(child: CircularProgressIndicator(color: _primaryColor)),
         if (!_isSaving)
@@ -211,12 +217,14 @@ class _AccountPageState extends State<AccountPage> {
           ),
         if (_isEditing)
           TextButton(onPressed: _toggleEdit, child: const Text("Batal")),
+
+        const SizedBox(height: 32),
+        _buildReviewSection(),
       ],
     );
   }
 
   Widget _buildProfileHeader() {
-    // ... (kode tidak berubah)
     return Column(
       children: [
         const CircleAvatar(
@@ -244,7 +252,6 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   Widget _buildInfoDetails() {
-    // ... (kode tidak berubah)
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
@@ -267,7 +274,6 @@ class _AccountPageState extends State<AccountPage> {
             icon: Icons.school_outlined,
           ),
           const Divider(height: 1),
-          // --- PERUBAHAN: Menampilkan semua field bank ---
           _buildBankInfoRow(
             label: "Nama Bank",
             controller: _bankNameController,
@@ -296,7 +302,6 @@ class _AccountPageState extends State<AccountPage> {
     required String value,
     required IconData icon,
   }) {
-    // ... (kode tidak berubah)
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: Row(
@@ -361,6 +366,87 @@ class _AccountPageState extends State<AccountPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildReviewSection() {
+    if (_isReviewLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: _primaryColor),
+      );
+    }
+    if (_reviews.isEmpty) {
+      return const Center(
+        child: Text(
+          'Belum ada review dari customer.',
+          style: TextStyle(color: _subtleTextColor),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Review dari Customer",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: _textColor,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ..._reviews.map(
+          (review) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: Colors.amber, size: 20),
+                      const SizedBox(width: 4),
+                      Text(
+                        review.rating.toString(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        review.customerName,
+                        style: const TextStyle(
+                          color: _subtleTextColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(review.review, style: const TextStyle(fontSize: 15)),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Text(
+                      review.createdAt,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: _subtleTextColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

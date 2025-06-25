@@ -22,7 +22,7 @@ class PorterProfile {
       porterName: json['porter_name'] ?? 'No Name',
       porterNrp: json['porter_nrp'] ?? 'No NRP',
       department:
-          json['department_name'] ??
+          json['department'] ??
           'N/A', // Asumsi nama relasinya 'department' dan fieldnya 'department_name'
       // --- PERUBAHAN ---
       // Sesuaikan key JSON ini dengan response dari API Anda
