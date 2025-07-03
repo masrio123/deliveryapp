@@ -228,7 +228,6 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  // --- DIPERBARUI --- Ikon chat global dihapus dari sini
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -242,7 +241,7 @@ class _MainPageState extends State<MainPage> {
               'Hello, $username',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 24,
+                fontSize: 21,
                 color: textColor,
                 fontFamily: 'Sen',
               ),
@@ -260,11 +259,6 @@ class _MainPageState extends State<MainPage> {
         ),
         Row(
           children: [
-            // Tombol chat sudah tidak ada di sini
-            IconButton(
-              icon: const Icon(Icons.logout_outlined, color: textColor),
-              onPressed: _logout,
-            ),
             Switch(
               value: isOnline,
               activeColor: greenColor,
@@ -292,6 +286,12 @@ class _MainPageState extends State<MainPage> {
                         }
                         setState(() => _isToggling = false);
                       },
+            ),
+            // --- INI PERUBAHANNYA ---
+            IconButton(
+              icon: const Icon(Icons.logout_outlined, color: redColor),
+              onPressed: _logout,
+              tooltip: 'Logout',
             ),
           ],
         ),
@@ -478,12 +478,10 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  // --- DIPERBARUI --- Logika penambahan tombol chat per order
   List<Widget> _buildOrderActions(Order order, int index) {
     final status = order.orderStatus ?? 'unknown';
     print('🎨 STATUS DETECTED for Order ID ${order.orderId}: "$status"');
 
-    // --- DITAMBAHKAN --- Widget tombol chat yang bisa dipakai ulang
     final chatButton = IconButton(
       icon: const Icon(Icons.chat_bubble_outline, color: primaryColor),
       onPressed: () {
@@ -520,9 +518,8 @@ class _MainPageState extends State<MainPage> {
         ];
       case 'Received':
         return [
-          // --- DITAMBAHKAN --- Tombol chat untuk status Received
           chatButton,
-          const Spacer(), // Memberi jarak agar tombol lain ke kanan
+          const Spacer(),
           _roundedButton(
             'Details',
             primaryColor,
@@ -532,9 +529,8 @@ class _MainPageState extends State<MainPage> {
         ];
       case 'On-Delivery':
         return [
-          // --- DITAMBAHKAN --- Tombol chat untuk status On-Delivery
           chatButton,
-          const Spacer(), // Memberi jarak agar tombol lain ke kanan
+          const Spacer(),
           _roundedButton(
             'Finish',
             greenColor,
@@ -549,7 +545,6 @@ class _MainPageState extends State<MainPage> {
 
   void _handleError(dynamic e, String defaultMessage) {
     String errorMessage = defaultMessage;
-    // Simple error handling for demonstration.
     _showStyledSnackBar(errorMessage, isError: true);
   }
 
@@ -648,6 +643,7 @@ class _MainPageState extends State<MainPage> {
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          // --- INI PERUBAHANNYA ---
                           children:
                               order.items.map((item) {
                                 return _restaurantCard(
@@ -661,6 +657,8 @@ class _MainPageState extends State<MainPage> {
                                                   'Unknown Item',
                                               'qty': p.quantity ?? 1,
                                               'price': p.price ?? 0,
+                                              'notes':
+                                                  p.notes, // Teruskan notes
                                             },
                                           )
                                           .toList(),
@@ -748,10 +746,10 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  // --- INI PERUBAHANNYA ---
   Widget _restaurantCard({
     required String name,
     required List<Map<String, dynamic>> items,
-    String? note,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -765,22 +763,53 @@ class _MainPageState extends State<MainPage> {
         children: [
           Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
           const Divider(height: 16),
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ...items.map((item) {
+            final String? note = item['notes'];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      '${item['name'] ?? 'Item'} x${item['qty'] ?? 1}',
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${item['name'] ?? 'Item'} x${item['qty'] ?? 1}',
+                        ),
+                      ),
+                      Text(currencyFormatter.format(item['price'] ?? 0)),
+                    ],
                   ),
-                  Text(currencyFormatter.format(item['price'] ?? 0)),
+                  if (note != null && note.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, left: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.sticky_note_2_outlined,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Catatan: $note',
+                              style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );
